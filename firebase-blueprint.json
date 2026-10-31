@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "AdminAccount": {
+      "title": "AdminAccount",
+      "description": "Administrator account credentials and profile for class management",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "description": "Admin username" },
+        "displayName": { "type": "string", "description": "Display name of admin" },
+        "passwordHash": { "type": "string", "description": "Hashed password of admin" },
+        "role": { "type": "string", "description": "Role title" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of update" }
+      },
+      "required": ["username", "displayName"]
+    },
+    "ClassPost": {
+      "title": "ClassPost",
+      "description": "Announcements, posts, and materials shared by admins for students",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the post" },
+        "content": { "type": "string", "description": "Content body" },
+        "author": { "type": "string", "description": "Author name" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Post timestamp" },
+        "attachmentType": { "type": "string", "description": "NONE, IMAGE, VIDEO, or DOCUMENT" },
+        "attachmentUri": { "type": "string", "description": "URI or name of attachment" },
+        "attachmentName": { "type": "string", "description": "Display file name" }
+      },
+      "required": ["title", "content", "author"]
+    },
+    "ClassMember": {
+      "title": "ClassMember",
+      "description": "Official class committee structure member",
+      "type": "object",
+      "properties": {
+        "positionKey": { "type": "string", "description": "Key of role e.g. WALI_KELAS" },
+        "roleTitle": { "type": "string", "description": "Display title e.g. Wali Kelas" },
+        "name": { "type": "string", "description": "Person's name" },
+        "nis": { "type": "string", "description": "Student or employee identification" },
+        "avatarUrl": { "type": "string", "description": "Photo/avatar URL" },
+        "contact": { "type": "string", "description": "Phone number or social link" }
+      },
+      "required": ["positionKey", "roleTitle", "name"]
+    },
+    "PicketDay": {
+      "title": "PicketDay",
+      "description": "Picket roster for a specific day of the week",
+      "type": "object",
+      "properties": {
+        "dayName": { "type": "string", "description": "Day name e.g. Senin, Selasa" },
+        "members": { "type": "string", "description": "Comma separated student names" }
+      },
+      "required": ["dayName"]
+    },
+    "ScheduleItem": {
+      "title": "ScheduleItem",
+      "description": "School timetable period and subject information",
+      "type": "object",
+      "properties": {
+        "dayOfWeek": { "type": "string", "description": "Day e.g. Senin" },
+        "periodLabel": { "type": "string", "description": "Jam ke-1, Jam ke-2" },
+        "timeRange": { "type": "string", "description": "07.00 - 07.45" },
+        "subject": { "type": "string", "description": "Subject name" },
+        "teacher": { "type": "string", "description": "Teacher name" },
+        "room": { "type": "string", "description": "Classroom" }
+      },
+      "required": ["dayOfWeek", "periodLabel", "timeRange", "subject"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminAccount" },
+      "description": "Class administrator accounts"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/ClassPost" },
+      "description": "Announcements and posts visible to all students"
+    },
+    "/structure/{memberId}": {
+      "schema": { "$ref": "#/entities/ClassMember" },
+      "description": "Class committee structure"
+    },
+    "/picket/{picketId}": {
+      "schema": { "$ref": "#/entities/PicketDay" },
+      "description": "Class picket schedule"
+    },
+    "/schedule/{scheduleId}": {
+      "schema": { "$ref": "#/entities/ScheduleItem" },
+      "description": "Daily school schedule and timetable"
+    }
+  }
+}

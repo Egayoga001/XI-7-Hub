@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>XI-7 Hub SMAN 3 Blitar - Toy Story Edition</title>
+    
+    <!-- PWA iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="XI-7 Hub">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Google Fonts Fredoka -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --andy-sky: #7EC8E3;
+            --andy-sky-light: #B4E1FF;
+            --woody-red: #E53935;
+            --woody-yellow: #FFD100;
+            --buzz-green: #00E676;
+            --buzz-purple: #9C27B0;
+            --comic-border: #1E293B;
+            --comic-card: #FFF9E6;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Fredoka', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--andy-sky);
+            background-image: radial-gradient(white 15%, transparent 16%), radial-gradient(white 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            color: var(--comic-border);
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header Sheriff Woody Style */
+        .header {
+            background: var(--woody-yellow);
+            border: 3px solid var(--comic-border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 6px 0 var(--comic-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: var(--woody-red);
+            text-shadow: 1px 1px 0 #FFF;
+        }
+
+        .star-badge {
+            background: var(--woody-red);
+            color: var(--woody-yellow);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid var(--comic-border);
+            box-shadow: 0 3px 0 var(--comic-border);
+        }
+
+        /* 3D Comic Cards */
+        .card {
+            background: var(--comic-card);
+            border: 3px solid var(--comic-border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 5px 0 var(--comic-border);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            color: var(--woody-red);
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.5;
+        }
+
+        /* Inputs (iOS 16px rule to prevent auto-zoom) */
+        input, textarea, select {
+            width: 100%;
+            font-size: 16px !important;
+            padding: 12px;
+            border: 3px solid var(--comic-border);
+            border-radius: 12px;
+            background: #FFFFFF;
+            outline: none;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Buzz Lightyear Buttons */
+        .btn-buzz {
+            background: var(--buzz-green);
+            color: var(--comic-border);
+            font-weight: bold;
+            font-size: 16px;
+            padding: 12px 20px;
+            border: 3px solid var(--comic-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 0 var(--comic-border);
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn-buzz:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 var(--comic-border);
+        }
+
+        .btn-purple {
+            background: var(--buzz-purple);
+            color: #FFFFFF;
+        }
+
+        .nav-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-bottom: 16px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            background: #FFF;
+            border: 2px solid var(--comic-border);
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 3px 0 var(--comic-border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>XI-7 Hub</h1>
+                <p style="font-size: 12px; color: #1E293B; font-weight: 600;">SMAN 3 Blitar • Toy Story Edition</p>
+            </div>
+            <div class="star-badge">★</div>
+        </div>
+
+        <!-- Main Content Card -->
+        <div class="card">
+            <h2>Selamat Datang di Andy's Room!</h2>
+            <p>Aplikasi resmi Kelas XI-7 SMAN 3 Blitar dengan tema Toy Story. Dirancang khusus untuk Android & iOS PWA.</p>
+        </div>
+
+        <!-- Quick Info Card -->
+        <div class="card" style="background: #E8F5E9;">
+            <h2>Piket & Jadwal Hari Ini</h2>
+            <p>• Jam Pelajaran 1-4: Matematika Lanjut<br>• Petugas Piket: Ahmad, Budi, Siti</p>
+            <button class="btn-buzz" style="margin-top: 12px;" onclick="alert('Notifikasi diaktifkan!')">Aktifkan Pengingat</button>
+        </div>
+
+        <!-- Admin Portal Section -->
+        <div class="card" style="background: #FFF3E0;">
+            <h2>Portal Admin Kelas</h2>
+            <label>Username Admin:</label>
+            <input type="text" placeholder="Masukkan username...">
+            <label>Password:</label>
+            <input type="password" placeholder="Masukkan password...">
+            <button class="btn-buzz btn-purple" onclick="alert('Fitur login PWA aktif!')">Masuk Admin</button>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <div class="nav-btn" style="background: var(--woody-yellow);">Home</div>
+            <div class="nav-btn" style="background: var(--andy-sky-light);">Struktur</div>
+            <div class="nav-btn" style="background: #C8F6C8;">Jadwal</div>
+            <div class="nav-btn" style="background: #E1BEE7;">Admin</div>
+        </div>
+    </div>
+</body>
+</html>

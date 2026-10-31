@@ -1,0 +1,6 @@
+{
+  "name": "XI-7 Hub",
+  "description": "Aplikasi jadwal pelajaran, piket harian kelas XI-7 SMAN 3 Blitar, pelacak tugas, pengingat notifikasi otomatis, dan sinkronisasi kelas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
