@@ -19,11 +19,19 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Grant execute permission for gradle
-      run: chmod +x gradle
+    - name: Generate Gradle Wrapper & Build APK
+      run: |
+        # Jika file gradlew tidak ada, buat secara otomatis menggunakan perintah gradle
+        if [ ! -f "./gradlew" ]; then
+          echo "Membuat Gradle Wrapper secara otomatis..."
+          gradle wrapper
+        fi
 
-    - name: Build Debug APK
-      run: ./gradle assembleDebug
+        # Beri izin eksekusi
+        chmod +x ./gradlew
+
+        # Jalankan proses build APK
+        ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
