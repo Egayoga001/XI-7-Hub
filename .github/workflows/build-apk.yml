@@ -19,18 +19,18 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Generate Debug Keystore
+      run: |
+        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -passin pass:android -passout pass:android -dname "CN=Android Debug,O=Android,C=US"
+        mkdir -p app
+        cp debug.keystore app/debug.keystore || true
+
     - name: Generate Gradle Wrapper & Build APK
       run: |
-        # Jika file gradlew tidak ada, buat secara otomatis menggunakan perintah gradle
         if [ ! -f "./gradlew" ]; then
-          echo "Membuat Gradle Wrapper secara otomatis..."
           gradle wrapper
         fi
-
-        # Beri izin eksekusi
         chmod +x ./gradlew
-
-        # Jalankan proses build APK
         ./gradlew assembleDebug
 
     - name: Upload APK Artifact
