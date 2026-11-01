@@ -1,7 +1,14 @@
 package com.example.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,11 +76,12 @@ fun ClassPostsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
         Spacer(modifier = Modifier.height(12.dp))
 
         // Top Admin Status Banner / Callout
@@ -345,6 +353,34 @@ fun ClassPostsScreen(
             onDismiss = { previewAttachmentPost = null }
         )
     }
+
+    // Floating Action Button for Posting (Always visible at bottom right)
+    ExtendedFloatingActionButton(
+        onClick = {
+            if (uiState.loggedInAdmin != null) {
+                showCreatePostDialog = true
+            } else {
+                showAuthDialog = true
+            }
+        },
+        containerColor = SmanEmerald,
+        contentColor = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(16.dp)
+            .testTag("fab_create_post"),
+        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+    ) {
+        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = if (uiState.loggedInAdmin != null) "Buat Postingan" else "Login Admin & Posting",
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp
+        )
+    }
+  }
 }
 
 @Composable
@@ -1376,12 +1412,38 @@ private fun CreatePostDialog(
     onDismiss: () -> Unit,
     onSubmit: (title: String, content: String, category: String, attachType: AttachmentType, uri: String, fileName: String) -> Unit
 ) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Pengumuman") }
     var attachmentType by remember { mutableStateOf(AttachmentType.NONE) }
     var attachmentUriOrData by remember { mutableStateOf("") }
     var attachmentFileName by remember { mutableStateOf("") }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            attachmentUriOrData = it.toString()
+            val path = it.lastPathSegment ?: "file_lampiran"
+            attachmentFileName = path.substringAfterLast('/')
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            when (attachmentType) {
+                AttachmentType.IMAGE -> filePickerLauncher.launch("image/*")
+                AttachmentType.VIDEO -> filePickerLauncher.launch("video/*")
+                AttachmentType.DOCUMENT -> filePickerLauncher.launch("*/*")
+                else -> filePickerLauncher.launch("*/*")
+            }
+        } else {
+            Toast.makeText(context, "Izin akses penyimpanan ditolak", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val categoryList = listOf("Pengumuman", "Materi", "Tugas", "Kegiatan")
 
@@ -1536,23 +1598,70 @@ private fun CreatePostDialog(
                 }
 
                 if (attachmentType != AttachmentType.NONE) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = attachmentFileName,
-                        onValueChange = { attachmentFileName = it },
-                        label = { Text("Nama File Lampiran") },
-                        placeholder = { Text("misal: modul_matematika.pdf") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Pilih Cara Lampiran Berkas:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate900)
                     Spacer(modifier = Modifier.height(6.dp))
+
+                    // OPSI 2: Tombol Upload File Perangkat (Minta Izin & Buka File Manager/Galeri)
+                    Button(
+                        onClick = {
+                            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                when (attachmentType) {
+                                    AttachmentType.IMAGE -> Manifest.permission.READ_MEDIA_IMAGES
+                                    AttachmentType.VIDEO -> Manifest.permission.READ_MEDIA_VIDEO
+                                    else -> Manifest.permission.READ_MEDIA_IMAGES
+                                }
+                            } else {
+                                Manifest.permission.READ_EXTERNAL_STORAGE
+                            }
+
+                            val hasPerm = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                            if (hasPerm) {
+                                when (attachmentType) {
+                                    AttachmentType.IMAGE -> filePickerLauncher.launch("image/*")
+                                    AttachmentType.VIDEO -> filePickerLauncher.launch("video/*")
+                                    AttachmentType.DOCUMENT -> filePickerLauncher.launch("*/*")
+                                    else -> filePickerLauncher.launch("*/*")
+                                }
+                            } else {
+                                permissionLauncher.launch(permission)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = SmanNavyPrimary),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_pick_device_file")
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("📁 Opsi 2: Upload File dari Penyimpanan / Galeri HP", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // OPSI 1: Kolom Input URL / Link Apapun
                     OutlinedTextField(
                         value = attachmentUriOrData,
                         onValueChange = { attachmentUriOrData = it },
-                        label = { Text("URL / Link Lampiran (Opsional)") },
-                        placeholder = { Text("https://... atau biarkan kosong") },
+                        label = { Text("Opsi 1: Salin & Tempel Link / URL (Opsional)") },
+                        placeholder = { Text("https://... (Drive, YouTube, atau Link Web)") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_attachment_url")
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = attachmentFileName,
+                        onValueChange = { attachmentFileName = it },
+                        label = { Text("Nama File / Keterangan Lampiran") },
+                        placeholder = { Text("misal: modul_matematika.pdf / foto_kegiatan.jpg") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_attachment_filename")
                     )
                 }
 
