@@ -27,6 +27,7 @@ data class ClassUiState(
     val notificationEnabled: Boolean = true,
     val notificationTime: String = "06:30",
     val selectedStudentForReminder: String = "Semua Siswa",
+    val isDarkMode: Boolean = false,
     val feedbackMessage: String? = null
 )
 
@@ -78,7 +79,8 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
                 nextLesson = nxtLesson,
                 notificationEnabled = repo.isNotificationEnabled(),
                 notificationTime = repo.getNotificationTime(),
-                selectedStudentForReminder = repo.getActiveStudentName()
+                selectedStudentForReminder = repo.getActiveStudentName(),
+                isDarkMode = repo.isDarkMode()
             )
         }
     }
@@ -418,6 +420,11 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
             loadInitialData()
             _uiState.update { it.copy(feedbackMessage = "Jadwal berhasil dikembalikan ke jadwal resmi!") }
         }
+    }
+
+    fun toggleDarkMode(enabled: Boolean) {
+        repo.setDarkMode(enabled)
+        _uiState.update { it.copy(isDarkMode = enabled, feedbackMessage = if (enabled) "Mode Gelap diaktifkan" else "Mode Terang diaktifkan") }
     }
 
     fun getDatabaseDump(): Map<String, String> {

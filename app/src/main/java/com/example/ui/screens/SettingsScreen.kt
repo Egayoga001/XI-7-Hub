@@ -357,6 +357,64 @@ fun SettingsScreen(
             }
         }
 
+        // Theme Toggle Card (Dark / Light Mode per device)
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = if (uiState.isDarkMode) WoodyYellow else SmanNavyPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Mode Tampilan Aplikasi",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = if (uiState.isDarkMode) "Mode Gelap (Dark Mode) aktif" else "Mode Terang (Light Mode) aktif",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = uiState.isDarkMode,
+                        onCheckedChange = { checked ->
+                            viewModel.toggleDarkMode(checked)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = WoodyYellow,
+                            checkedTrackColor = WoodyRed,
+                            uncheckedThumbColor = SmanNavyPrimary,
+                            uncheckedTrackColor = Slate200
+                        ),
+                        modifier = Modifier.testTag("switch_dark_mode")
+                    )
+                }
+            }
+        }
+
         // Automatic Notification Reminder Settings Card
         item {
             Card(

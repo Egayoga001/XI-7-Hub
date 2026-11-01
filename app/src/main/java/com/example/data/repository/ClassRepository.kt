@@ -561,6 +561,14 @@ class ClassRepository(private val context: Context) {
         prefs.edit().putString("cloud_sync_url", url).apply()
     }
 
+    fun isDarkMode(): Boolean {
+        return prefs.getBoolean("is_dark_mode", false)
+    }
+
+    fun setDarkMode(isDark: Boolean) {
+        prefs.edit().putBoolean("is_dark_mode", isDark).apply()
+    }
+
     // ==========================================
     // 5. PIKET & ATTENDANCE
     // ==========================================

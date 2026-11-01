@@ -33,8 +33,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MyApplicationTheme {
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            MyApplicationTheme(darkTheme = uiState.isDarkMode) {
                 val snackbarHostState = remember { SnackbarHostState() }
 
                 // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+)
