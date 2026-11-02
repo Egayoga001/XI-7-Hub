@@ -44,14 +44,14 @@ fun AnimatedSplashScreen(
                 .testTag("splash_screen_overlay"),
             contentAlignment = Alignment.Center
         ) {
-            // Logo bulat Exieven persis di tengah layar
+            // Logo Exieven persis di tengah layar dengan background oranye polos (#FF7A00)
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_round),
                 contentDescription = "Logo Exieven Hub",
                 modifier = Modifier
-                    .size(250.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape),
-                contentScale = ContentScale.Fit
+                    .size(240.dp)
+                    .clip(RoundedCornerShape(36.dp)),
+                contentScale = ContentScale.Crop
             )
         }
     }
