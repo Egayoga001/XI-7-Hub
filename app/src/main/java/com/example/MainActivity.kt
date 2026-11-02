@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.components.AnimatedSplashScreen
 import com.example.ui.components.AppBottomNavigation
 import com.example.ui.components.AppTopBar
 import com.example.ui.components.NotificationPermissionDialog
@@ -62,91 +64,93 @@ class MainActivity : ComponentActivity() {
                     viewModel.setActiveTab(0)
                 }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    topBar = {
-                        val subtitleText = when (uiState.activeTab) {
-                            0 -> "Beranda Kelas XI-7"
-                            1 -> "Jadwal Pelajaran & Piket"
-                            2 -> "Postingan & Materi Kelas"
-                            3 -> "Struktur Pengurus Kelas"
-                            else -> "Pengaturan & Info Notifikasi"
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            val subtitleText = when (uiState.activeTab) {
+                                0 -> "Beranda Kelas XI-7"
+                                1 -> "Jadwal Pelajaran & Piket"
+                                2 -> "Postingan & Materi Kelas"
+                                3 -> "Struktur Pengurus Kelas"
+                                else -> "Pengaturan & Info Notifikasi"
+                            }
+                            AppTopBar(
+                                title = "XI-7 Hub • SMAN 3 Blitar",
+                                subtitle = subtitleText,
+                                loggedInAdmin = uiState.loggedInAdmin,
+                                onAdminBadgeClick = { viewModel.setActiveTab(2) },
+                                onInfoClick = { viewModel.setActiveTab(4) }
+                            )
+                        },
+                        bottomBar = {
+                            AppBottomNavigation(
+                                selectedTab = uiState.activeTab,
+                                onTabSelected = { viewModel.setActiveTab(it) }
+                            )
+                        },
+                        snackbarHost = { SnackbarHost(snackbarHostState) }
+                    ) { innerPadding ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            when (uiState.activeTab) {
+                                0 -> HomeScreen(
+                                    uiState = uiState,
+                                    viewModel = viewModel,
+                                    onNavigateToSchedule = { viewModel.setActiveTab(1) },
+                                    onNavigateToPosts = { viewModel.setActiveTab(2) },
+                                    onNavigateToStructure = { viewModel.setActiveTab(3) },
+                                    onNavigateToSettings = { viewModel.setActiveTab(4) }
+                                )
+                                1 -> ScheduleScreen(
+                                    uiState = uiState,
+                                    viewModel = viewModel
+                                )
+                                2 -> ClassPostsScreen(
+                                    uiState = uiState,
+                                    viewModel = viewModel
+                                )
+                                3 -> ClassStructureScreen(
+                                    uiState = uiState,
+                                    viewModel = viewModel
+                                )
+                                4 -> SettingsScreen(
+                                    uiState = uiState,
+                                    viewModel = viewModel
+                                )
+                            }
                         }
-                        AppTopBar(
-                            title = "XI-7 Hub • SMAN 3 Blitar",
-                            subtitle = subtitleText,
-                            loggedInAdmin = uiState.loggedInAdmin,
-                            onAdminBadgeClick = { viewModel.setActiveTab(2) },
-                            onInfoClick = { viewModel.setActiveTab(4) }
-                        )
-                    },
-                    bottomBar = {
-                        AppBottomNavigation(
-                            selectedTab = uiState.activeTab,
-                            onTabSelected = { viewModel.setActiveTab(it) }
-                        )
-                    },
-                    snackbarHost = { SnackbarHost(snackbarHostState) }
-                ) { innerPadding ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        when (uiState.activeTab) {
-                            0 -> HomeScreen(
-                                uiState = uiState,
-                                viewModel = viewModel,
-                                onNavigateToSchedule = { viewModel.setActiveTab(1) },
-                                onNavigateToPosts = { viewModel.setActiveTab(2) },
-                                onNavigateToStructure = { viewModel.setActiveTab(3) },
-                                onNavigateToSettings = { viewModel.setActiveTab(4) }
-                            )
-                            1 -> ScheduleScreen(
-                                uiState = uiState,
-                                viewModel = viewModel
-                            )
-                            2 -> ClassPostsScreen(
-                                uiState = uiState,
-                                viewModel = viewModel
-                            )
-                            3 -> ClassStructureScreen(
-                                uiState = uiState,
-                                viewModel = viewModel
-                            )
-                            4 -> SettingsScreen(
-                                uiState = uiState,
-                                viewModel = viewModel
-                            )
-                        }
+                    }
 
-                        // Pop-up Izin Notifikasi untuk Pengunjung/Pengguna Baru
-                        if (uiState.showNotificationPermissionDialog) {
-                            NotificationPermissionDialog(
-                                onGrant = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        val hasPerm = ContextCompat.checkSelfPermission(
-                                            this@MainActivity,
-                                            Manifest.permission.POST_NOTIFICATIONS
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        if (!hasPerm) {
-                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                        }
+                    // Pop-up Izin Notifikasi untuk Pengunjung/Pengguna Baru
+                    if (uiState.showNotificationPermissionDialog) {
+                        NotificationPermissionDialog(
+                            onGrant = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPerm = ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPerm) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
-                                    viewModel.dismissNotificationPermissionDialog(granted = true)
-                                },
-                                onDismiss = {
-                                    viewModel.dismissNotificationPermissionDialog(granted = false)
                                 }
-                            )
-                        }
-
-                        // Animated Splash Screen Overlay (EXIEVEN HUB)
-                        com.example.ui.components.AnimatedSplashScreen(
-                            onLoadingFinished = {}
+                                viewModel.dismissNotificationPermissionDialog(granted = true)
+                            },
+                            onDismiss = {
+                                viewModel.dismissNotificationPermissionDialog(granted = false)
+                            }
                         )
                     }
+
+                    // Animated Splash Screen Overlay (EXIEVEN HUB)
+                    AnimatedSplashScreen(
+                        onLoadingFinished = {}
+                    )
                 }
             }
         }
