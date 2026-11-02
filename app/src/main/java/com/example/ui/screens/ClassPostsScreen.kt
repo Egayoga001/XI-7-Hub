@@ -887,6 +887,96 @@ private fun PostAttachmentView(
     }
 }
 
+private fun handleDownloadAttachment(
+    context: android.content.Context,
+    uriOrData: String,
+    fileName: String,
+    mimeType: String = "*/*"
+) {
+    val cleanUri = uriOrData.trim()
+    if (cleanUri.isEmpty()) {
+        Toast.makeText(context, "Lampiran tidak tersedia untuk diunduh", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    try {
+        if (cleanUri.startsWith("http://") || cleanUri.startsWith("https://")) {
+            val dm = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as? android.app.DownloadManager
+            if (dm != null) {
+                val safeName = if (fileName.isNotBlank()) fileName else "Lampiran_XI7_${System.currentTimeMillis()}"
+                val req = android.app.DownloadManager.Request(Uri.parse(cleanUri)).apply {
+                    setTitle(safeName)
+                    setDescription("Mengunduh berkas postingan XI-7 Hub...")
+                    setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, safeName)
+                    setAllowedOverMetered(true)
+                    setAllowedOverRoaming(true)
+                }
+                dm.enqueue(req)
+                Toast.makeText(context, "Memulai unduhan file: $safeName...", Toast.LENGTH_SHORT).show()
+            } else {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUri))
+                context.startActivity(intent)
+            }
+        } else if (cleanUri.startsWith("data:") || cleanUri.contains("base64,")) {
+            val base64Data = if (cleanUri.contains(",")) cleanUri.substringAfter(",") else cleanUri
+            val decoded = Base64.decode(base64Data, Base64.DEFAULT)
+            val safeName = if (fileName.isNotBlank()) fileName else "XI7_File_${System.currentTimeMillis()}"
+            val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadDir.exists()) downloadDir.mkdirs()
+            val outFile = java.io.File(downloadDir, safeName)
+            outFile.writeBytes(decoded)
+            Toast.makeText(context, "File tersimpan di folder Unduhan: $safeName", Toast.LENGTH_LONG).show()
+        } else {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUri)).apply {
+                setDataAndType(Uri.parse(cleanUri), mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Simpan / Unduh File melalui..."))
+        }
+    } catch (e: Exception) {
+        try {
+            val fallback = Intent(Intent.ACTION_VIEW, Uri.parse(if (cleanUri.startsWith("http")) cleanUri else "https://drive.google.com"))
+            context.startActivity(fallback)
+        } catch (ex: Exception) {
+            Toast.makeText(context, "Gagal mengunduh file", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun handleOpenAttachmentWith(
+    context: android.content.Context,
+    uriOrData: String,
+    mimeType: String = "*/*"
+) {
+    val cleanUri = uriOrData.trim()
+    val targetUri = if (cleanUri.startsWith("http://") || cleanUri.startsWith("https://") || cleanUri.startsWith("content://") || cleanUri.startsWith("file://")) {
+        Uri.parse(cleanUri)
+    } else {
+        Uri.parse("https://drive.google.com")
+    }
+
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            if (cleanUri.startsWith("content://") || cleanUri.startsWith("file://")) {
+                setDataAndType(targetUri, mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } else {
+                data = targetUri
+            }
+        }
+        val chooser = Intent.createChooser(intent, "Buka Melalui...")
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        try {
+            val fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com"))
+            context.startActivity(fallback)
+        } catch (ex: Exception) {
+            Toast.makeText(context, "Aplikasi eksternal tidak ditemukan", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
 @Composable
 private fun AttachmentDetailDialog(
     post: ClassPost,
@@ -943,12 +1033,7 @@ private fun AttachmentDetailDialog(
                             ) {
                                 Button(
                                     onClick = {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(post.attachmentUriOrData))
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Membuka gambar...", Toast.LENGTH_SHORT).show()
-                                        }
+                                        handleOpenAttachmentWith(context, post.attachmentUriOrData, "image/*")
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = SmanNavyPrimary),
                                     shape = RoundedCornerShape(8.dp),
@@ -961,13 +1046,7 @@ private fun AttachmentDetailDialog(
 
                                 OutlinedButton(
                                     onClick = {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(post.attachmentUriOrData))
-                                            context.startActivity(intent)
-                                            Toast.makeText(context, "Mengunduh gambar...", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Gagal mengunduh", Toast.LENGTH_SHORT).show()
-                                        }
+                                        handleDownloadAttachment(context, post.attachmentUriOrData, post.attachmentFileName.ifEmpty { "Gambar_XI7.jpg" }, "image/*")
                                     },
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)
@@ -1027,14 +1106,7 @@ private fun AttachmentDetailDialog(
                         ) {
                             Button(
                                 onClick = {
-                                    if (uriStr.isNotEmpty()) {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Tidak dapat memutar video", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                    handleOpenAttachmentWith(context, uriStr, "video/*")
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = SmanEmerald),
                                 shape = RoundedCornerShape(8.dp),
@@ -1047,15 +1119,7 @@ private fun AttachmentDetailDialog(
 
                             OutlinedButton(
                                 onClick = {
-                                    if (uriStr.isNotEmpty()) {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
-                                            context.startActivity(intent)
-                                            Toast.makeText(context, "Mendownload video...", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Gagal download", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                    handleDownloadAttachment(context, uriStr, post.attachmentFileName.ifEmpty { "Video_XI7.mp4" }, "video/*")
                                 },
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f)
@@ -1102,13 +1166,8 @@ private fun AttachmentDetailDialog(
                         ) {
                             Button(
                                 onClick = {
-                                    val targetUri = if (post.attachmentUriOrData.isNotEmpty()) post.attachmentUriOrData else "https://drive.google.com"
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUri))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Membuka dokumen melalui cloud/eksternal...", Toast.LENGTH_SHORT).show()
-                                    }
+                                    val mime = if (post.attachmentFileName.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "*/*"
+                                    handleOpenAttachmentWith(context, post.attachmentUriOrData, mime)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = SmanNavyPrimary),
                                 shape = RoundedCornerShape(8.dp),
@@ -1121,14 +1180,8 @@ private fun AttachmentDetailDialog(
 
                             OutlinedButton(
                                 onClick = {
-                                    val targetUri = if (post.attachmentUriOrData.isNotEmpty()) post.attachmentUriOrData else "https://drive.google.com"
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUri))
-                                        context.startActivity(intent)
-                                        Toast.makeText(context, "Mengunduh dokumen...", Toast.LENGTH_SHORT).show()
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Gagal mengunduh dokumen", Toast.LENGTH_SHORT).show()
-                                    }
+                                    val mime = if (post.attachmentFileName.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "*/*"
+                                    handleDownloadAttachment(context, post.attachmentUriOrData, post.attachmentFileName.ifEmpty { "Dokumen_XI7.pdf" }, mime)
                                 },
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f)
