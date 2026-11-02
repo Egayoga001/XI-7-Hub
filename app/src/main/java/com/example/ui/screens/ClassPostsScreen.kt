@@ -932,10 +932,51 @@ private fun AttachmentDetailDialog(
                                 contentDescription = post.attachmentFileName,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 280.dp)
+                                    .heightIn(max = 260.dp)
                                     .clip(RoundedCornerShape(12.dp)),
                                 contentScale = ContentScale.Fit
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(post.attachmentUriOrData))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Membuka gambar...", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SmanNavyPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Lihat (Preview)", fontSize = 12.sp)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(post.attachmentUriOrData))
+                                            context.startActivity(intent)
+                                            Toast.makeText(context, "Mengunduh gambar...", Toast.LENGTH_SHORT).show()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal mengunduh", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Download", fontSize = 12.sp)
+                                }
+                            }
                         } else {
                             Box(
                                 modifier = Modifier
@@ -953,8 +994,8 @@ private fun AttachmentDetailDialog(
                         val isYouTube = uriStr.contains("youtube.com") || uriStr.contains("youtu.be")
                         val isDrive = uriStr.contains("drive.google.com")
                         val platformLabel = when {
-                            isYouTube -> "Putar di YouTube"
-                            isDrive -> "Buka di Google Drive"
+                            isYouTube -> "Putar Video di YouTube"
+                            isDrive -> "Putar Video di Google Drive"
                             else -> "Putar Video Pembelajaran"
                         }
                         Surface(
@@ -962,17 +1003,7 @@ private fun AttachmentDetailDialog(
                             color = Slate900,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(140.dp)
-                                .clickable {
-                                    if (uriStr.isNotEmpty()) {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Membuka video: ${post.attachmentFileName}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
+                                .height(130.dp)
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxSize(),
@@ -982,12 +1013,56 @@ private fun AttachmentDetailDialog(
                                 Icon(
                                     imageVector = Icons.Default.PlayCircle,
                                     contentDescription = null,
-                                    tint = if (isYouTube) Red500 else if (isDrive) Amber500 else WoodyYellow,
-                                    modifier = Modifier.size(54.dp)
+                                    tint = WoodyYellow,
+                                    modifier = Modifier.size(48.dp)
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(platformLabel, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text("Ketuk untuk memutar video langsung di perangkat", color = Slate400, fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (uriStr.isNotEmpty()) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Tidak dapat memutar video", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = SmanEmerald),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Putar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    if (uriStr.isNotEmpty()) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
+                                            context.startActivity(intent)
+                                            Toast.makeText(context, "Mendownload video...", Toast.LENGTH_SHORT).show()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal download", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Download", fontSize = 12.sp)
                             }
                         }
                     }
@@ -997,25 +1072,70 @@ private fun AttachmentDetailDialog(
                             color = Slate100,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp)
+                                .padding(vertical = 4.dp)
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Red500, modifier = Modifier.size(52.dp))
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Red500, modifier = Modifier.size(48.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = post.attachmentFileName,
+                                    text = post.attachmentFileName.ifEmpty { "Dokumen Kelas XI-7.pdf" },
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = Slate900
+                                    color = Slate900,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "Dokumen resmi materi/tugas kelas XI-7",
+                                    text = "Dokumen resmi materi / tugas",
                                     fontSize = 11.sp,
                                     color = Slate700
                                 )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val targetUri = if (post.attachmentUriOrData.isNotEmpty()) post.attachmentUriOrData else "https://drive.google.com"
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUri))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Membuka dokumen melalui cloud/eksternal...", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = SmanNavyPrimary),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Buka Melalui...", fontSize = 11.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    val targetUri = if (post.attachmentUriOrData.isNotEmpty()) post.attachmentUriOrData else "https://drive.google.com"
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUri))
+                                        context.startActivity(intent)
+                                        Toast.makeText(context, "Mengunduh dokumen...", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Gagal mengunduh dokumen", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Download", fontSize = 12.sp)
                             }
                         }
                     }
@@ -1516,10 +1636,10 @@ private fun CreatePostDialog(
 
             when (attachmentType) {
                 AttachmentType.IMAGE -> {
-                    val compressedBase64 = compressImageUriToBase64(context, pickedUri)
-                    if (compressedBase64 != null) {
-                        attachmentUriOrData = compressedBase64
-                        Toast.makeText(context, "Foto berhasil dikompresi (max 800px, 70% quality)!", Toast.LENGTH_SHORT).show()
+                    val base64Data = readUriAsBase64(context, pickedUri, "image/jpeg")
+                    if (base64Data != null) {
+                        attachmentUriOrData = base64Data
+                        Toast.makeText(context, "Foto berhasil dimuat dan siap dibagikan!", Toast.LENGTH_SHORT).show()
                     } else {
                         attachmentUriOrData = pickedUri.toString()
                     }
