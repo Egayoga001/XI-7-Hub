@@ -545,6 +545,55 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Kirim Notifikasi Pengingat Sekarang", fontWeight = FontWeight.Bold)
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = { viewModel.openNotificationPermissionDialog() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_reopen_notification_dialog")
+                    ) {
+                        Icon(imageVector = Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(16.dp), tint = WoodyRed)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Tampilkan Pop-up Izin Notifikasi", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Live Admin Change Notification Notice
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = WoodyYellow.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, WoodyYellow.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Campaign,
+                                    contentDescription = null,
+                                    tint = WoodyRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Notifikasi Real-Time dari Admin",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Selama aplikasi terpasang di HP, kamu akan menerima notifikasi otomatis di bilah status setiap kali Admin mengubah postingan, jadwal pelajaran, jadwal piket, atau susunan pengurus kelas.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
                 }
             }
         }

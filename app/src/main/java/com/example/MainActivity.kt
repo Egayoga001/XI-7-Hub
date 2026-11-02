@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.AppBottomNavigation
 import com.example.ui.components.AppTopBar
+import com.example.ui.components.NotificationPermissionDialog
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ClassViewModel
@@ -31,6 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleIntent(intent)
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -43,18 +46,6 @@ class MainActivity : ComponentActivity() {
                 ) { isGranted ->
                     if (isGranted) {
                         viewModel.setNotificationEnabled(true)
-                    }
-                }
-
-                LaunchedEffect(Unit) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val hasPerm = ContextCompat.checkSelfPermission(
-                            this@MainActivity,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (!hasPerm) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
                     }
                 }
 
@@ -129,9 +120,48 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel
                             )
                         }
+
+                        // Pop-up Izin Notifikasi untuk Pengunjung/Pengguna Baru
+                        if (uiState.showNotificationPermissionDialog) {
+                            NotificationPermissionDialog(
+                                onGrant = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val hasPerm = ContextCompat.checkSelfPermission(
+                                            this@MainActivity,
+                                            Manifest.permission.POST_NOTIFICATIONS
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                        if (!hasPerm) {
+                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    }
+                                    viewModel.dismissNotificationPermissionDialog(granted = true)
+                                },
+                                onDismiss = {
+                                    viewModel.dismissNotificationPermissionDialog(granted = false)
+                                }
+                            )
+                        }
+
+                        // Animated Splash Screen Overlay (EXIEVEN HUB)
+                        com.example.ui.components.AnimatedSplashScreen(
+                            onLoadingFinished = {}
+                        )
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val targetTab = intent?.getIntExtra("TARGET_TAB", -1) ?: -1
+        if (targetTab in 0..4) {
+            viewModel.setActiveTab(targetTab)
         }
     }
 }

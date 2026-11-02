@@ -33,6 +33,7 @@ fun ScheduleScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Pelajaran, 1: Piket
     var lessonToEdit by remember { mutableStateOf<LessonPeriod?>(null) }
+    var picketDayToEdit by remember { mutableStateOf<DayOfWeekEnum?>(null) }
     val days = listOf(
         DayOfWeekEnum.SENIN,
         DayOfWeekEnum.SELASA,
@@ -388,12 +389,30 @@ fun ScheduleScreen(
                                     }
                                 }
 
-                                Text(
-                                    text = "${studentList.size} Petugas",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Slate700
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${studentList.size} Petugas",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Slate700
+                                    )
+                                    if (uiState.loggedInAdmin != null) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        IconButton(
+                                            onClick = { picketDayToEdit = day },
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .testTag("btn_edit_piket_${day.name.lowercase()}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit Petugas Piket",
+                                                tint = WoodyRed,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -489,7 +508,140 @@ fun ScheduleScreen(
                 }
             )
         }
+
+        if (picketDayToEdit != null) {
+            val day = picketDayToEdit!!
+            val currentList = uiState.picketSchedule[day] ?: emptyList()
+            EditPicketDialog(
+                day = day,
+                currentStudents = currentList,
+                onDismiss = { picketDayToEdit = null },
+                onSave = { newList ->
+                    viewModel.updatePicketSchedule(day, newList)
+                    picketDayToEdit = null
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun EditPicketDialog(
+    day: DayOfWeekEnum,
+    currentStudents: List<String>,
+    onDismiss: () -> Unit,
+    onSave: (List<String>) -> Unit
+) {
+    val allStudents = com.example.data.repository.ClassRepository.ALL_36_STUDENTS
+    var selectedStudents by remember { mutableStateOf(currentStudents.toSet()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CleaningServices,
+                    contentDescription = null,
+                    tint = BuzzGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Edit Petugas Piket",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Hari ${day.displayName} (${selectedStudents.size} terpilih)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 350.dp)
+            ) {
+                Text(
+                    text = "Pilih siswa bertugas piket hari ${day.displayName}:",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(allStudents) { student ->
+                        val isSelected = selectedStudents.contains(student)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) SmanEmeraldLight else Slate50,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedStudents = if (isSelected) {
+                                        selectedStudents - student
+                                    } else {
+                                        selectedStudents + student
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = student,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) SmanEmeraldDark else Slate900
+                                )
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { checked ->
+                                        selectedStudents = if (checked) {
+                                            selectedStudents + student
+                                        } else {
+                                            selectedStudents - student
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(selectedStudents.toList()) },
+                colors = ButtonDefaults.buttonColors(containerColor = BuzzGreen),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Simpan Piket", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable

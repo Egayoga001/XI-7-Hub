@@ -28,7 +28,8 @@ data class ClassUiState(
     val notificationTime: String = "06:30",
     val selectedStudentForReminder: String = "Semua Siswa",
     val isDarkMode: Boolean = false,
-    val feedbackMessage: String? = null
+    val feedbackMessage: String? = null,
+    val showNotificationPermissionDialog: Boolean = false
 )
 
 class ClassViewModel(application: Application) : AndroidViewModel(application) {
@@ -64,6 +65,8 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
 
         val (curLesson, nxtLesson) = calculateCurrentAndNextLessons(today, lessonsList)
 
+        val shouldShowPermissionDialog = !repo.hasPromptedInitialNotification()
+
         _uiState.update {
             it.copy(
                 loggedInAdmin = currentAdmin,
@@ -80,7 +83,8 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
                 notificationEnabled = repo.isNotificationEnabled(),
                 notificationTime = repo.getNotificationTime(),
                 selectedStudentForReminder = repo.getActiveStudentName(),
-                isDarkMode = repo.isDarkMode()
+                isDarkMode = repo.isDarkMode(),
+                showNotificationPermissionDialog = shouldShowPermissionDialog
             )
         }
     }
@@ -258,7 +262,7 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val newPost = ClassPost(
-            id = "post_" + UUID.randomUUID().toString().take(8),
+            id = "post_${System.currentTimeMillis()}_" + UUID.randomUUID().toString().take(8),
             title = title.trim(),
             content = content.trim(),
             authorName = admin.fullName,
@@ -314,11 +318,27 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
                 feedbackMessage = "Struktur pengurus kelas berhasil diperbarui!"
             )
         }
+        if (_uiState.value.notificationEnabled) {
+            NotificationHelper.showStructureUpdateNotification(getApplication(), structure)
+        }
     }
 
     // ==========================================
     // NOTIFICATIONS & REMINDERS
     // ==========================================
+
+    fun dismissNotificationPermissionDialog(granted: Boolean) {
+        repo.setPromptedInitialNotification(true)
+        if (granted) {
+            setNotificationEnabled(true)
+            NotificationHelper.showWelcomeNotification(getApplication())
+        }
+        _uiState.update { it.copy(showNotificationPermissionDialog = false) }
+    }
+
+    fun openNotificationPermissionDialog() {
+        _uiState.update { it.copy(showNotificationPermissionDialog = true) }
+    }
 
     fun triggerLessonAlert(lesson: LessonPeriod) {
         NotificationHelper.showLessonAlertNotification(getApplication(), lesson)
@@ -370,6 +390,26 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
         repo.togglePicketAttendance(studentName, isPresent)
     }
 
+    fun updatePicketSchedule(day: DayOfWeekEnum, studentList: List<String>) {
+        val admin = _uiState.value.loggedInAdmin
+        if (admin == null) {
+            _uiState.update { it.copy(feedbackMessage = "Hanya Admin yang dapat mengubah jadwal piket!") }
+            return
+        }
+        val currentMap = _uiState.value.picketSchedule.toMutableMap()
+        currentMap[day] = studentList
+        repo.savePicketSchedule(currentMap)
+        _uiState.update {
+            it.copy(
+                picketSchedule = currentMap,
+                feedbackMessage = "Jadwal piket hari ${day.displayName} berhasil diperbarui!"
+            )
+        }
+        if (_uiState.value.notificationEnabled) {
+            NotificationHelper.showPicketUpdateNotification(getApplication(), day.displayName, studentList)
+        }
+    }
+
     fun testNotificationNow() {
         NotificationHelper.triggerTestNotification(getApplication())
         _uiState.update { it.copy(feedbackMessage = "Notifikasi pengingat jam pelajaran & piket dikirim ke bilah status!") }
@@ -402,8 +442,17 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         if (success) {
+            val periodLabel = _uiState.value.lessons.firstOrNull { it.id == lessonId }?.periodLabel ?: ""
             loadInitialData()
             _uiState.update { it.copy(feedbackMessage = "Jadwal '$newSubject' berhasil diperbarui!") }
+            if (_uiState.value.notificationEnabled) {
+                NotificationHelper.showScheduleUpdateNotification(
+                    getApplication(),
+                    newSubject,
+                    periodLabel,
+                    newTeacherName
+                )
+            }
         } else {
             _uiState.update { it.copy(feedbackMessage = "Gagal memperbarui jadwal pelajaran.") }
         }
@@ -415,10 +464,19 @@ class ClassViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        val defaultItem = ClassRepository.getDefaultLessons().firstOrNull { it.id == lessonId }
         val success = repo.resetLessonToDefault(lessonId)
         if (success) {
             loadInitialData()
             _uiState.update { it.copy(feedbackMessage = "Jadwal berhasil dikembalikan ke jadwal resmi!") }
+            if (_uiState.value.notificationEnabled && defaultItem != null) {
+                NotificationHelper.showScheduleUpdateNotification(
+                    getApplication(),
+                    defaultItem.subject,
+                    defaultItem.periodLabel,
+                    defaultItem.teacherName
+                )
+            }
         }
     }
 

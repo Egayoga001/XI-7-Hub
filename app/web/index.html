@@ -5,17 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>XI-7 Hub SMAN 3 Blitar - Toy Story Edition</title>
     
-    <!-- PWA iOS Meta Tags -->
+    <!-- PWA iOS & Android Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="XI-7 Hub">
-    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#E53935">
     <link rel="manifest" href="manifest.json">
 
     <!-- Google Fonts Fredoka -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK v10 (Compat version for reliable standalone execution) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
@@ -23,10 +27,27 @@
             --andy-sky-light: #B4E1FF;
             --woody-red: #E53935;
             --woody-yellow: #FFD100;
+            --woody-brown: #8D5524;
             --buzz-green: #00E676;
             --buzz-purple: #9C27B0;
             --comic-border: #1E293B;
             --comic-card: #FFF9E6;
+            --bg-color: #7EC8E3;
+            --card-bg: #FFF9E6;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --input-bg: #FFFFFF;
+            --badge-bg: #E2E8F0;
+        }
+
+        body.dark-mode {
+            --bg-color: #0F1E36;
+            --card-bg: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --input-bg: #334155;
+            --comic-card: #1E293B;
+            --badge-bg: #334155;
         }
 
         * {
@@ -34,36 +55,83 @@
             font-family: 'Fredoka', sans-serif;
             margin: 0;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--andy-sky);
-            background-image: radial-gradient(white 15%, transparent 16%), radial-gradient(white 15%, transparent 16%);
+            background-color: var(--bg-color);
+            background-image: radial-gradient(rgba(255, 255, 255, 0.4) 15%, transparent 16%), radial-gradient(rgba(255, 255, 255, 0.3) 15%, transparent 16%);
             background-size: 60px 60px;
             background-position: 0 0, 30px 30px;
-            color: var(--comic-border);
+            color: var(--text-main);
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
             width: 100%;
-            max-width: 480px;
+            max-width: 520px;
             padding: 16px;
+            padding-bottom: 90px;
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
+        }
+
+        /* Top Status Bar (Cloud connection & Dark Mode) */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            border: 2px solid var(--comic-border);
+            border-radius: 12px;
+            padding: 8px 14px;
+            box-shadow: 0 3px 0 var(--comic-border);
+        }
+
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1.5px solid var(--comic-border);
+            background: #E8F5E9;
+            color: #1B5E20;
+        }
+        .sync-badge.syncing {
+            background: #FFF9C4;
+            color: #F57F17;
+        }
+        .sync-badge.error {
+            background: #FFEBEE;
+            color: #B71C1C;
+        }
+
+        .theme-toggle-btn {
+            background: var(--woody-yellow);
+            border: 2px solid var(--comic-border);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 0 var(--comic-border);
         }
 
         /* Header Sheriff Woody Style */
         .header {
             background: var(--woody-yellow);
             border: 3px solid var(--comic-border);
-            border-radius: 16px;
+            border-radius: 18px;
             padding: 16px;
             box-shadow: 0 6px 0 var(--comic-border);
             display: flex;
@@ -72,148 +140,1296 @@
         }
 
         .header h1 {
-            font-size: 22px;
+            font-size: 24px;
             color: var(--woody-red);
             text-shadow: 1px 1px 0 #FFF;
+            line-height: 1.1;
+        }
+        .header p {
+            font-size: 12px;
+            color: #1E293B;
+            font-weight: 600;
+            margin-top: 4px;
         }
 
         .star-badge {
             background: var(--woody-red);
             color: var(--woody-yellow);
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 22px;
             font-weight: bold;
-            border: 2px solid var(--comic-border);
+            border: 3px solid var(--comic-border);
             box-shadow: 0 3px 0 var(--comic-border);
+            flex-shrink: 0;
         }
 
         /* 3D Comic Cards */
         .card {
-            background: var(--comic-card);
+            background: var(--card-bg);
             border: 3px solid var(--comic-border);
             border-radius: 16px;
             padding: 16px;
             box-shadow: 0 5px 0 var(--comic-border);
+            position: relative;
         }
 
         .card h2 {
-            font-size: 18px;
+            font-size: 17px;
             color: var(--woody-red);
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        body.dark-mode .card h2 {
+            color: var(--woody-yellow);
         }
 
         .card p {
-            font-size: 14px;
-            color: #334155;
+            font-size: 13px;
+            color: var(--text-main);
             line-height: 1.5;
         }
 
-        /* Inputs (iOS 16px rule to prevent auto-zoom) */
+        /* Tabs Navigation */
+        .tab-selector {
+            display: flex;
+            background: var(--badge-bg);
+            border: 2px solid var(--comic-border);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--woody-red);
+            color: #FFFFFF;
+            box-shadow: 0 2px 0 var(--comic-border);
+        }
+
+        /* Forms, Inputs, Buttons */
         input, textarea, select {
             width: 100%;
-            font-size: 16px !important;
-            padding: 12px;
-            border: 3px solid var(--comic-border);
-            border-radius: 12px;
-            background: #FFFFFF;
+            font-size: 15px !important;
+            padding: 10px 14px;
+            border: 2px solid var(--comic-border);
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-main);
             outline: none;
-            margin-top: 8px;
-            margin-bottom: 12px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            margin-top: 6px;
+            margin-bottom: 10px;
         }
 
-        /* Buzz Lightyear Buttons */
-        .btn-buzz {
-            background: var(--buzz-green);
-            color: var(--comic-border);
-            font-weight: bold;
-            font-size: 16px;
-            padding: 12px 20px;
-            border: 3px solid var(--comic-border);
-            border-radius: 12px;
-            box-shadow: 0 4px 0 var(--comic-border);
+        .btn {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 16px;
+            border: 2px solid var(--comic-border);
+            border-radius: 10px;
             cursor: pointer;
-            width: 100%;
-            text-align: center;
-            transition: transform 0.1s, box-shadow 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 0 var(--comic-border);
+            transition: transform 0.05s, box-shadow 0.05s;
         }
-
-        .btn-buzz:active {
+        .btn:active {
             transform: translateY(2px);
             box-shadow: 0 2px 0 var(--comic-border);
         }
 
-        .btn-purple {
-            background: var(--buzz-purple);
-            color: #FFFFFF;
+        .btn-green { background: var(--buzz-green); color: #0F172A; width: 100%; }
+        .btn-red { background: var(--woody-red); color: #FFFFFF; }
+        .btn-yellow { background: var(--woody-yellow); color: #1E293B; }
+        .btn-purple { background: var(--buzz-purple); color: #FFFFFF; width: 100%; }
+
+        /* Media display (Image, Video, Iframe) */
+        .media-preview-container {
+            margin-top: 10px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid var(--comic-border);
+            background: #000;
         }
 
-        .nav-bar {
+        .media-img {
+            width: 100%;
+            max-height: 380px;
+            object-fit: cover;
+            display: block;
+        }
+
+        video {
+            width: 100%;
+            max-height: 380px;
+            display: block;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        .video-iframe-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #000;
+        }
+        .video-iframe-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Schedule period item */
+        .schedule-item {
             display: flex;
-            gap: 8px;
-            margin-top: auto;
-            padding-bottom: 16px;
-        }
-
-        .nav-btn {
-            flex: 1;
+            align-items: center;
+            justify-content: space-between;
             padding: 10px;
-            background: #FFF;
+            background: var(--input-bg);
             border: 2px solid var(--comic-border);
             border-radius: 10px;
-            font-size: 12px;
-            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .schedule-time {
+            background: var(--badge-bg);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
             text-align: center;
+            border: 1.5px solid var(--comic-border);
+        }
+
+        /* Post item */
+        .post-card {
+            background: var(--card-bg);
+            border: 3px solid var(--comic-border);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 4px 0 var(--comic-border);
+            margin-bottom: 12px;
+        }
+
+        .post-tag {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: var(--woody-yellow);
+            color: #1E293B;
+            border: 1px solid var(--comic-border);
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        /* Modal Dialog */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 3px solid var(--comic-border);
+            border-radius: 18px;
+            padding: 18px;
+            max-width: 460px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 0 var(--comic-border);
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-top: 3px solid var(--comic-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+            z-index: 999;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
             cursor: pointer;
-            box-shadow: 0 3px 0 var(--comic-border);
+            border: none;
+            background: none;
+            padding: 4px;
+        }
+        .nav-item.active {
+            color: var(--woody-red);
+        }
+        .nav-item svg {
+            width: 22px;
+            height: 22px;
+            stroke-width: 2.2;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Top Cloud Status & Theme Toggle -->
+        <div class="status-bar">
+            <div id="sync-status" class="sync-badge">
+                <span id="sync-dot">🟢</span>
+                <span id="sync-text">Sinkron ke Cloud</span>
+            </div>
+            <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn">🌙 Mode Gelap</button>
+        </div>
+
         <!-- Header -->
         <div class="header">
             <div>
                 <h1>XI-7 Hub</h1>
-                <p style="font-size: 12px; color: #1E293B; font-weight: 600;">SMAN 3 Blitar • Toy Story Edition</p>
+                <p>SMAN 3 Blitar • Toy Story Edition</p>
             </div>
             <div class="star-badge">★</div>
         </div>
 
-        <!-- Main Content Card -->
-        <div class="card">
-            <h2>Selamat Datang di Andy's Room!</h2>
-            <p>Aplikasi resmi Kelas XI-7 SMAN 3 Blitar dengan tema Toy Story. Dirancang khusus untuk Android & iOS PWA.</p>
+        <!-- TAB 1: BERANDA -->
+        <div id="view-home" class="view-panel">
+            <div class="card" style="background: var(--woody-yellow); color: #1E293B;">
+                <h2 style="color: #1E293B;">⭐ Ruang Kelas XI-7</h2>
+                <p>Selamat datang di Hub Resmi Kelas XI-7 SMAN 3 Blitar. Jadwal pelajaran, tugas harian, dan informasi kelas tersinkron otomatis antar HP siswa & guru.</p>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+                <h2>🔔 Jam & Piket Hari Ini</h2>
+                <div id="home-today-info" style="margin-top: 6px;">
+                    <p>Memuat info jadwal hari ini...</p>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+                <h2>📢 Postingan & Pengumuman Terbaru</h2>
+                <div id="home-recent-posts" style="margin-top: 6px;">
+                    <p style="font-size: 12px; color: var(--text-muted);">Memuat pengumuman terbaru...</p>
+                </div>
+            </div>
         </div>
 
-        <!-- Quick Info Card -->
-        <div class="card" style="background: #E8F5E9;">
-            <h2>Piket & Jadwal Hari Ini</h2>
-            <p>• Jam Pelajaran 1-4: Matematika Lanjut<br>• Petugas Piket: Ahmad, Budi, Siti</p>
-            <button class="btn-buzz" style="margin-top: 12px;" onclick="alert('Notifikasi diaktifkan!')">Aktifkan Pengingat</button>
+        <!-- TAB 2: JADWAL (PELAJARAN & PIKET) -->
+        <div id="view-schedule" class="view-panel" style="display: none;">
+            <div class="tab-selector">
+                <button class="tab-btn active" id="btn-sub-lessons" onclick="switchScheduleSubtab(0)">Jadwal Pelajaran</button>
+                <button class="tab-btn" id="btn-sub-picket" onclick="switchScheduleSubtab(1)">Piket 36 Siswa</button>
+            </div>
+
+            <!-- Subtab Pelajaran -->
+            <div id="subtab-lessons" style="margin-top: 10px;">
+                <div class="tab-selector" style="margin-bottom: 12px;">
+                    <button class="tab-btn active day-btn" onclick="filterDaySchedule('SENIN', this)">Senin</button>
+                    <button class="tab-btn day-btn" onclick="filterDaySchedule('SELASA', this)">Selasa</button>
+                    <button class="tab-btn day-btn" onclick="filterDaySchedule('RABU', this)">Rabu</button>
+                    <button class="tab-btn day-btn" onclick="filterDaySchedule('KAMIS', this)">Kamis</button>
+                    <button class="tab-btn day-btn" onclick="filterDaySchedule('JUMAT', this)">Jumat</button>
+                </div>
+
+                <div id="admin-schedule-edit-hint" style="display: none; background: #FFF9C4; border: 2px solid var(--comic-border); border-radius: 8px; padding: 8px; margin-bottom: 8px; font-size: 11px; font-weight: 700; color: #1E293B;">
+                    ✏️ Mode Admin Aktif: Klik pada jam pelajaran untuk mengedit mapel atau guru!
+                </div>
+
+                <div id="schedule-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Subtab Piket -->
+            <div id="subtab-picket" style="display: none; margin-top: 10px;">
+                <div class="card" style="background: #E8F5E9;">
+                    <h2 style="color: #1B5E20;">Daftar Piket 36 Siswa Kelas XI-7</h2>
+                    <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">Piket kelas wajib hadir pukul 06.30 WIB dan membersihkan kelas sebelum upacara/KBM.</p>
+                    <div id="picket-schedule-container">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Admin Portal Section -->
-        <div class="card" style="background: #FFF3E0;">
-            <h2>Portal Admin Kelas</h2>
-            <label>Username Admin:</label>
-            <input type="text" placeholder="Masukkan username...">
-            <label>Password:</label>
-            <input type="password" placeholder="Masukkan password...">
-            <button class="btn-buzz btn-purple" onclick="alert('Fitur login PWA aktif!')">Masuk Admin</button>
+        <!-- TAB 3: POSTINGAN & MATERI -->
+        <div id="view-posts" class="view-panel" style="display: none;">
+            <div class="card" style="margin-bottom: 12px;">
+                <h2>
+                    <span>Forum Pengumuman & Berkas</span>
+                    <button id="btn-open-create-post" class="btn btn-yellow" style="font-size: 12px; padding: 6px 12px;" onclick="openCreatePostModal()">
+                        + Buat Postingan
+                    </button>
+                </h2>
+                <p style="font-size: 12px;">Mendukung foto, video, dokumen PDF, dan tautan YouTube/Drive yang dapat diputar langsung.</p>
+            </div>
+
+            <div id="posts-container">
+                <!-- Posts dynamically rendered -->
+            </div>
         </div>
 
-        <!-- Navigation Bar -->
-        <div class="nav-bar">
-            <div class="nav-btn" style="background: var(--woody-yellow);">Home</div>
-            <div class="nav-btn" style="background: var(--andy-sky-light);">Struktur</div>
-            <div class="nav-btn" style="background: #C8F6C8;">Jadwal</div>
-            <div class="nav-btn" style="background: #E1BEE7;">Admin</div>
+        <!-- TAB 4: STRUKTUR KELAS -->
+        <div id="view-structure" class="view-panel" style="display: none;">
+            <div class="card">
+                <h2>👑 Wali Kelas & Struktur Pengurus</h2>
+                <div id="structure-content" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Structure loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: PENGATURAN & ADMIN -->
+        <div id="view-admin" class="view-panel" style="display: none;">
+            <div class="card">
+                <h2>🔐 Status Akun Admin</h2>
+                <div id="admin-status-box" style="margin-top: 8px;">
+                    <!-- Login status loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
+                <h2>☁️ Database Google Cloud</h2>
+                <p style="font-size: 12px; line-height: 1.6;">
+                    • Project: <strong>gen-lang-client-0386187786</strong><br>
+                    • Engine: <strong>Google Cloud Firestore Real-time</strong><br>
+                    • Mode: <strong>Sinkronisasi Instan Lintas HP (Multi-Device)</strong>
+                </p>
+            </div>
         </div>
     </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchMainTab('home', this)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Beranda
+        </button>
+        <button class="nav-item" onclick="switchMainTab('schedule', this)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            Jadwal
+        </button>
+        <button class="nav-item" onclick="switchMainTab('posts', this)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            Postingan
+        </button>
+        <button class="nav-item" onclick="switchMainTab('structure', this)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Struktur
+        </button>
+        <button class="nav-item" onclick="switchMainTab('admin', this)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Admin
+        </button>
+    </nav>
+
+    <!-- MODAL 1: LOGIN ADMIN -->
+    <div id="modal-login" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: var(--woody-red); margin-bottom: 12px;">🔑 Login Pengurus Kelas</h2>
+            <label style="font-size: 12px; font-weight: 700;">Username:</label>
+            <input type="text" id="login-username" placeholder="misal: admin1" value="admin1">
+            <label style="font-size: 12px; font-weight: 700;">Password:</label>
+            <input type="password" id="login-password" placeholder="misal: 123" value="123">
+            <button class="btn btn-green" onclick="doAdminLogin()">Masuk Admin</button>
+            <button class="btn" style="width: 100%; margin-top: 8px; background: #E2E8F0;" onclick="closeModal('modal-login')">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: BUAT POSTINGAN BARU -->
+    <div id="modal-create-post" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: var(--woody-red); margin-bottom: 8px;">📢 Unggah Postingan Baru</h2>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Otomatis tersimpan ke Cloud Firestore & tampil real-time di seluruh HP.</p>
+            
+            <label style="font-size: 12px; font-weight: 700;">Judul Postingan:</label>
+            <input type="text" id="post-title" placeholder="misal: Jadwal Pengumpulan Tugas Sosiologi">
+
+            <label style="font-size: 12px; font-weight: 700;">Kategori:</label>
+            <select id="post-category">
+                <option value="Pengumuman">Pengumuman</option>
+                <option value="Materi">Materi Pelajaran</option>
+                <option value="Tugas">Tugas Kelas</option>
+                <option value="Kegiatan">Dokumentasi & Kegiatan</option>
+            </select>
+
+            <label style="font-size: 12px; font-weight: 700;">Isi Pesan:</label>
+            <textarea id="post-content" rows="4" placeholder="Tuliskan instruksi atau pesan untuk seluruh siswa..."></textarea>
+
+            <label style="font-size: 12px; font-weight: 700;">Jenis Lampiran:</label>
+            <select id="post-attachment-type" onchange="onAttachmentTypeChanged()">
+                <option value="NONE">Tanpa Lampiran</option>
+                <option value="IMAGE">Gambar / Foto (Auto-Compress)</option>
+                <option value="VIDEO">Video (Maks 10MB / Embed)</option>
+                <option value="DOCUMENT">Dokumen / PDF</option>
+            </select>
+
+            <div id="attachment-options-wrapper" style="display: none; margin-top: 8px; padding: 10px; border: 2px dashed var(--comic-border); border-radius: 12px;">
+                <!-- Opsi 1: Upload File Lokal (dengan kompresi canvas / validasi 10MB) -->
+                <label style="font-size: 11px; font-weight: 700; color: var(--woody-red);">📁 Opsi 1: Upload File dari HP (Gambar/Video/PDF)</label>
+                <input type="file" id="post-file-input" onchange="handleFileUpload(event)" style="padding: 6px; font-size: 12px !important;">
+                
+                <div id="file-upload-status" style="font-size: 11px; font-weight: 600; color: #1B5E20; margin-bottom: 6px;"></div>
+
+                <!-- Opsi 2: Tempel Link URL Eksternal -->
+                <label style="font-size: 11px; font-weight: 700; color: var(--buzz-purple);">🔗 Opsi 2: Atau Tempel Link (YouTube, Drive, Web)</label>
+                <input type="text" id="post-url-input" placeholder="https://youtube.com/watch?v=... atau link Drive">
+            </div>
+
+            <button class="btn btn-green" id="btn-submit-post" style="margin-top: 14px;" onclick="submitNewPost()">Unggah & Kirim ke Seluruh HP</button>
+            <button class="btn" style="width: 100%; margin-top: 8px; background: #E2E8F0;" onclick="closeModal('modal-create-post')">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: EDIT JADWAL PELAJARAN (ADMIN) -->
+    <div id="modal-edit-lesson" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: var(--woody-red); margin-bottom: 12px;">✏️ Edit Jadwal Pelajaran</h2>
+            <input type="hidden" id="edit-lesson-id">
+            <label style="font-size: 12px; font-weight: 700;">Hari:</label>
+            <input type="text" id="edit-lesson-day" disabled style="background: var(--badge-bg);">
+            <label style="font-size: 12px; font-weight: 700;">Jam Ke / Waktu:</label>
+            <input type="text" id="edit-lesson-time">
+            <label style="font-size: 12px; font-weight: 700;">Mata Pelajaran:</label>
+            <input type="text" id="edit-lesson-subject">
+            <label style="font-size: 12px; font-weight: 700;">Nama Guru:</label>
+            <input type="text" id="edit-lesson-teacher">
+            <label style="font-size: 12px; font-weight: 700;">Kode Guru:</label>
+            <input type="text" id="edit-lesson-code">
+            <button class="btn btn-green" onclick="saveEditedLesson()">Simpan Perubahan Jadwal</button>
+            <button class="btn" style="width: 100%; margin-top: 8px; background: #E2E8F0;" onclick="closeModal('modal-edit-lesson')">Batal</button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // ==========================================
+        // 1. CONFIG & FIREBASE INITIALIZATION
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqjg_GuBjv66AfUgdM6YumohzMVl0uKZo",
+            authDomain: "gen-lang-client-0386187786.firebaseapp.com",
+            projectId: "gen-lang-client-0386187786",
+            storageBucket: "gen-lang-client-0386187786.firebasestorage.app",
+            messagingSenderId: "1019527128257",
+            appId: "1:1019527128257:web:8e1d2c3b4a5f6e7d8c9b0a"
+        };
+
+        let db = null;
+        let isOnline = false;
+
+        try {
+            if (typeof firebase !== 'undefined' && firebase.apps) {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
+                console.log("Firebase Firestore connected successfully");
+            }
+        } catch (e) {
+            console.warn("Firebase init note:", e.message || e);
+        }
+
+        // State & Defaults
+        let currentAdmin = JSON.parse(localStorage.getItem('xi7_admin_auth') || 'null');
+        let appPosts = [];
+        let appLessons = [];
+        let selectedDay = 'SENIN';
+        let currentAttachmentData = '';
+        let currentAttachmentName = '';
+
+        // Default Data Bundles
+        const DEFAULT_STUDENTS = [
+            "Erastus", "Cahaya", "Edsel", "Agtya", "Amirah", "Novel",
+            "Mikail", "Munazza", "Nadia", "Ega", "Awalia", "Reno", "Evan",
+            "Aiko", "Nana", "Ismah", "Najwa", "Dafa", "Rafahsyan", "Salma",
+            "Sharfina", "Afif", "Rafif", "Thufail", "Vasha", "Rama", "Santika", "Akira",
+            "Mira", "Zulfa", "Bagus", "Angger", "Aufa", "Ferdinan", "Mega", "Asyraf"
+        ];
+
+        const DEFAULT_PICKET = {
+            SENIN: ["Erastus", "Cahaya", "Edsel", "Agtya", "Amirah", "Novel"],
+            SELASA: ["Mikail", "Munazza", "Nadia", "Ega", "Awalia", "Reno", "Evan"],
+            RABU: ["Aiko", "Nana", "Ismah", "Najwa", "Dafa", "Rafahsyan", "Salma"],
+            KAMIS: ["Sharfina", "Afif", "Rafif", "Thufail", "Vasha", "Rama", "Santika", "Akira"],
+            JUMAT: ["Mira", "Zulfa", "Bagus", "Angger", "Aufa", "Ferdinan", "Mega", "Asyraf"]
+        };
+
+        const DEFAULT_LESSONS = [
+            // SENIN
+            { id: "mon_0", day: "SENIN", periodLabel: "Jam 0", timeRange: "07.00 - 08.15", subject: "UPACARA BENDERA", teacherName: "Seluruh Guru & Siswa", teacherCode: "-", isBreak: false },
+            { id: "mon_1_2", day: "SENIN", periodLabel: "Jam 1-2", timeRange: "08.15 - 09.45", subject: "Ekonomi", teacherName: "Naning Eko Noviana, M.Pd", teacherCode: "Kode 42", isBreak: false },
+            { id: "mon_rest1", day: "SENIN", periodLabel: "Istirahat I", timeRange: "09.45 - 10.10", subject: "Istirahat I", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "mon_3_4", day: "SENIN", periodLabel: "Jam 3-4", timeRange: "10.10 - 11.40", subject: "Bahasa Indonesia", teacherName: "Siti Mariyah, M.Pd", teacherCode: "Kode 7", isBreak: false },
+            { id: "mon_ishoma", day: "SENIN", periodLabel: "ISHOMA", timeRange: "11.40 - 12.20", subject: "ISHOMA", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "mon_5_6", day: "SENIN", periodLabel: "Jam 5-6", timeRange: "12.20 - 13.40", subject: "Seni Budaya", teacherName: "Sri Mei Rahayu, S.Pd", teacherCode: "Kode 27", isBreak: false },
+            { id: "mon_7_8", day: "SENIN", periodLabel: "Jam 7-8", timeRange: "13.40 - 15.00", subject: "Bahasa Jawa", teacherName: "Novia Ardana, S.Pd", teacherCode: "Kode 6", isBreak: false },
+            // SELASA
+            { id: "tue_1_3", day: "SELASA", periodLabel: "Jam 1-3", timeRange: "07.00 - 09.10", subject: "PJOK", teacherName: "Eko Wijanarko, S.Pd", teacherCode: "Kode 24", isBreak: false },
+            { id: "tue_4", day: "SELASA", periodLabel: "Jam 4", timeRange: "09.15 - 09.55", subject: "BK", teacherName: "Mei Riyanasari, S.Pd", teacherCode: "Kode 54", isBreak: false },
+            { id: "tue_rest1", day: "SELASA", periodLabel: "Istirahat I", timeRange: "09.55 - 10.20", subject: "Istirahat I", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "tue_5_6", day: "SELASA", periodLabel: "Jam 5-6", timeRange: "10.20 - 11.40", subject: "PKWU", teacherName: "Umaiyah, S.E", teacherCode: "Kode 50", isBreak: false },
+            { id: "tue_ishoma", day: "SELASA", periodLabel: "ISHOMA", timeRange: "11.40 - 12.20", subject: "ISHOMA", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "tue_7_8", day: "SELASA", periodLabel: "Jam 7-8", timeRange: "12.20 - 13.40", subject: "Geografi", teacherName: "Agus Slamet Daroini, S.Pd", teacherCode: "Kode 44", isBreak: false },
+            { id: "tue_9_10", day: "SELASA", periodLabel: "Jam 9-10", timeRange: "13.40 - 15.00", subject: "Sosiologi", teacherName: "Risto Prassetyo, S.Sos", teacherCode: "Kode 47", isBreak: false },
+            // RABU
+            { id: "wed_1_2", day: "RABU", periodLabel: "Jam 1-2", timeRange: "07.00 - 08.30", subject: "Bahasa Indonesia", teacherName: "Siti Mariyah, M.Pd", teacherCode: "Kode 7", isBreak: false },
+            { id: "wed_3_4", day: "RABU", periodLabel: "Jam 3-4", timeRange: "08.30 - 09.55", subject: "Agama", teacherName: "Sri Mei Rahayu, S.Pd", teacherCode: "Kode 27", isBreak: false },
+            { id: "wed_rest1", day: "RABU", periodLabel: "Istirahat I", timeRange: "09.55 - 10.20", subject: "Istirahat I", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "wed_5_6", day: "RABU", periodLabel: "Jam 5-6", timeRange: "10.20 - 11.40", subject: "Matematika", teacherName: "Budi Saptono, S.Si", teacherCode: "Kode 33", isBreak: false },
+            { id: "wed_ishoma", day: "RABU", periodLabel: "ISHOMA", timeRange: "11.40 - 12.20", subject: "ISHOMA", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "wed_7_8", day: "RABU", periodLabel: "Jam 7-8", timeRange: "12.20 - 13.40", subject: "Sejarah", teacherName: "Dyah Ayu H., S.Pd", teacherCode: "Kode 21", isBreak: false },
+            { id: "wed_9_10", day: "RABU", periodLabel: "Jam 9-10", timeRange: "13.40 - 15.00", subject: "Bahasa Inggris", teacherName: "Yullyana Hesti P. S., S.Pd", teacherCode: "Kode 11", isBreak: false },
+            // KAMIS
+            { id: "thu_1_2", day: "KAMIS", periodLabel: "Jam 1-2", timeRange: "07.00 - 08.30", subject: "PKN", teacherName: "Roziq Azizi, S.Pd", teacherCode: "Kode 4", isBreak: false },
+            { id: "thu_3_4", day: "KAMIS", periodLabel: "Jam 3-4", timeRange: "08.30 - 09.55", subject: "Geografi", teacherName: "Agus Slamet Daroini, S.Pd", teacherCode: "Kode 44", isBreak: false },
+            { id: "thu_rest1", day: "KAMIS", periodLabel: "Istirahat I", timeRange: "09.55 - 10.20", subject: "Istirahat I", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "thu_5_6", day: "KAMIS", periodLabel: "Jam 5-6", timeRange: "10.20 - 11.40", subject: "TIK / Informatika", teacherName: "Syaiful Anam, S.T", teacherCode: "Kode 38", isBreak: false },
+            { id: "thu_ishoma", day: "KAMIS", periodLabel: "ISHOMA", timeRange: "11.40 - 12.20", subject: "ISHOMA", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "thu_7_8", day: "KAMIS", periodLabel: "Jam 7-8", timeRange: "12.20 - 13.40", subject: "Ekonomi", teacherName: "Naning Eko Noviana, M.Pd", teacherCode: "Kode 42", isBreak: false },
+            { id: "thu_9_10", day: "KAMIS", periodLabel: "Jam 9-10", timeRange: "13.40 - 15.00", subject: "Sosiologi", teacherName: "Risto Prassetyo, S.Sos", teacherCode: "Kode 47", isBreak: false },
+            // JUMAT
+            { id: "fri_1_2", day: "JUMAT", periodLabel: "Jam 1-2", timeRange: "07.00 - 08.10", subject: "BMQ", teacherName: "Yuli Widi Astuti, S.Pd", teacherCode: "Kode 26", isBreak: false },
+            { id: "fri_3_4", day: "JUMAT", periodLabel: "Jam 3-4", timeRange: "08.10 - 09.30", subject: "Informatika", teacherName: "Syaiful Anam, S.T", teacherCode: "Kode 38", isBreak: false },
+            { id: "fri_rest1", day: "JUMAT", periodLabel: "Istirahat I", timeRange: "09.30 - 09.55", subject: "Istirahat I", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "fri_5_6", day: "JUMAT", periodLabel: "Jam 5-6", timeRange: "09.55 - 11.10", subject: "Matematika", teacherName: "Sri Retnawati, S.Pd", teacherCode: "Kode 15", isBreak: false },
+            { id: "fri_ishoma", day: "JUMAT", periodLabel: "ISHOMA", timeRange: "11.10 - 12.30", subject: "ISHOMA", teacherName: "-", teacherCode: "-", isBreak: true },
+            { id: "fri_7", day: "JUMAT", periodLabel: "Jam 7", timeRange: "12.30 - 13.00", subject: "Pertemuan Wali / Sikap", teacherName: "Wali Kelas XI-7", teacherCode: "-", isBreak: false }
+        ];
+
+        let classStructure = {
+            homeroomTeacher: "Dyah Ayu H., S.Pd",
+            homeroomNip: "Guru Wali Kelas XI-7",
+            classLeader: "Erastus",
+            viceLeader: "Cahaya",
+            secretary1: "Amirah",
+            secretary2: "Sharfina",
+            treasurer1: "Santika",
+            treasurer2: "Aiko"
+        };
+
+        // ==========================================
+        // 2. REAL-TIME CLOUD LISTENER (FIRESTORE)
+        // ==========================================
+        function updateSyncBadge(status, text) {
+            const badge = document.getElementById('sync-status');
+            const dot = document.getElementById('sync-dot');
+            const label = document.getElementById('sync-text');
+            badge.className = 'sync-badge ' + status;
+            dot.textContent = status === 'syncing' ? '🟡' : (status === 'error' ? '🔴' : '🟢');
+            label.textContent = text;
+        }
+
+        function setupRealtimeListeners() {
+            if (!db) return;
+
+            updateSyncBadge('syncing', 'Menghubungkan ke Cloud...');
+
+            // 1. Listen Posts
+            db.collection("posts").onSnapshot((snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => {
+                    list.push({ id: doc.id, ...doc.data() });
+                });
+                list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                appPosts = list;
+                renderPosts();
+                renderHomeSummary();
+                updateSyncBadge('', 'Sinkron ke Cloud');
+            }, (error) => {
+                console.error("Posts snapshot error:", error);
+                updateSyncBadge('error', 'Koneksi Terputus');
+            });
+
+            // 2. Listen Lessons
+            db.collection("lessons").onSnapshot((snapshot) => {
+                if (!snapshot.empty) {
+                    const lessonsMap = {};
+                    snapshot.forEach(doc => {
+                        lessonsMap[doc.id] = { id: doc.id, ...doc.data() };
+                    });
+                    appLessons = DEFAULT_LESSONS.map(dl => lessonsMap[dl.id] || dl);
+                } else {
+                    appLessons = [...DEFAULT_LESSONS];
+                }
+                renderSchedule();
+                renderHomeSummary();
+            }, (err) => {
+                console.warn("Lessons snapshot fallback:", err);
+            });
+
+            // 3. Listen Structure
+            db.collection("structure").doc("committee").onSnapshot((doc) => {
+                if (doc.exists) {
+                    classStructure = { ...classStructure, ...doc.data() };
+                    renderStructure();
+                }
+            }, (err) => console.warn("Structure error:", err));
+        }
+
+        // ==========================================
+        // 3. MEDIA UPLOAD (CANVAS COMPRESS & 10MB VIDEO)
+        // ==========================================
+        // Auto-compress image to HTML5 canvas (max 800px width, 0.7 JPEG quality)
+        function compressImageToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > MAX_WIDTH) {
+                            height = Math.round((height * MAX_WIDTH) / width);
+                            width = MAX_WIDTH;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+                reader.onerror = (err) => reject(err);
+            });
+        }
+
+        // Validate & read video / document <= 10MB asynchronously via Promise
+        function readMediaFileAsync(file, maxSizeMb = 10) {
+            return new Promise((resolve, reject) => {
+                const sizeMb = file.size / (1024 * 1024);
+                if (sizeMb > maxSizeMb) {
+                    return reject(new Error(`Ukuran file (${sizeMb.toFixed(1)}MB) melebihi batas maksimal ${maxSizeMb}MB! Silakan kompres atau gunakan link eksternal.`));
+                }
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const statusEl = document.getElementById('file-upload-status');
+            if (!file) return;
+
+            statusEl.textContent = '⏳ Memproses & mengompres berkas...';
+            statusEl.style.color = '#F57F17';
+
+            try {
+                const type = document.getElementById('post-attachment-type').value;
+                currentAttachmentName = file.name;
+
+                if (type === 'IMAGE' || file.type.startsWith('image/')) {
+                    const compressedBase64 = await compressImageToDataUrl(file);
+                    currentAttachmentData = compressedBase64;
+                    statusEl.textContent = `✅ Gambar berhasil dikompresi: ${file.name}`;
+                    statusEl.style.color = '#1B5E20';
+                } else if (type === 'VIDEO' || file.type.startsWith('video/')) {
+                    const videoBase64 = await readMediaFileAsync(file, 10);
+                    currentAttachmentData = videoBase64;
+                    statusEl.textContent = `✅ Video siap diputar: ${file.name} (${(file.size / (1024*1024)).toFixed(1)}MB)`;
+                    statusEl.style.color = '#1B5E20';
+                } else {
+                    const docBase64 = await readMediaFileAsync(file, 10);
+                    currentAttachmentData = docBase64;
+                    statusEl.textContent = `✅ Dokumen siap diunggah: ${file.name}`;
+                    statusEl.style.color = '#1B5E20';
+                }
+            } catch (err) {
+                alert(err.message || 'Gagal memproses file.');
+                statusEl.textContent = '❌ Gagal: ' + (err.message || 'Error file');
+                statusEl.style.color = '#B71C1C';
+                event.target.value = '';
+                currentAttachmentData = '';
+                currentAttachmentName = '';
+            }
+        }
+
+        // ==========================================
+        // 4. VIDEO EMBED & PARSER (YOUTUBE, DRIVE, TIKTOK)
+        // ==========================================
+        function parseExternalVideoUrl(url) {
+            if (!url) return null;
+            const str = url.trim();
+
+            // YouTube: watch?v=ID or youtu.be/ID or shorts/ID
+            const ytMatch = str.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+            if (ytMatch && ytMatch[1]) {
+                return {
+                    type: 'iframe',
+                    embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0&playsinline=1`
+                };
+            }
+
+            // Google Drive preview: /file/d/FILE_ID/
+            const driveMatch = str.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
+            if (driveMatch && driveMatch[1]) {
+                return {
+                    type: 'iframe',
+                    embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
+                };
+            }
+
+            // Direct video link or Data URL
+            if (str.startsWith('data:video') || str.match(/\.(mp4|webm|mov|ogg)($|\?)/i)) {
+                return {
+                    type: 'video',
+                    url: str
+                };
+            }
+
+            return null;
+        }
+
+        // ==========================================
+        // 5. POSTINGAN MANAGEMENT (CUD DIRECT TO CLOUD)
+        // ==========================================
+        async function submitNewPost() {
+            if (!currentAdmin) {
+                alert('Hanya akun Admin kelas yang dapat membuat postingan!');
+                openModal('modal-login');
+                return;
+            }
+
+            const title = document.getElementById('post-title').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+            const category = document.getElementById('post-category').value;
+            const attachType = document.getElementById('post-attachment-type').value;
+            const manualUrl = document.getElementById('post-url-input').value.trim();
+
+            if (!title || !content) {
+                alert('Judul dan isi pesan wajib diisi!');
+                return;
+            }
+
+            const finalUri = manualUrl || currentAttachmentData;
+            const finalFileName = currentAttachmentName || (manualUrl ? 'Tautan Lampiran' : '');
+
+            const submitBtn = document.getElementById('btn-submit-post');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Menyimpan ke Cloud...';
+            updateSyncBadge('syncing', 'Menyimpan postingan...');
+
+            // Unique ID: Date.now() + Math.random().toString(36).substr(2, 9)
+            const postId = 'post_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+            const newPostData = {
+                id: postId,
+                title: title,
+                content: content,
+                category: category,
+                authorName: currentAdmin.fullName || 'Admin XI-7',
+                authorRole: currentAdmin.roleTitle || 'Pengurus Kelas',
+                createdAt: Date.now(),
+                attachmentType: attachType,
+                attachmentUriOrData: finalUri || '',
+                attachmentFileName: finalFileName || ''
+            };
+
+            try {
+                if (db) {
+                    await db.collection("posts").doc(postId).set(newPostData);
+                } else {
+                    appPosts.unshift(newPostData);
+                    renderPosts();
+                }
+
+                closeModal('modal-create-post');
+                // Reset form
+                document.getElementById('post-title').value = '';
+                document.getElementById('post-content').value = '';
+                document.getElementById('post-file-input').value = '';
+                document.getElementById('post-url-input').value = '';
+                document.getElementById('file-upload-status').textContent = '';
+                currentAttachmentData = '';
+                currentAttachmentName = '';
+                alert('Postingan berhasil diterbitkan ke seluruh perangkat!');
+            } catch (err) {
+                console.error("Save post error:", err);
+                alert('Gagal menyimpan ke cloud: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Unggah & Kirim ke Seluruh HP';
+                updateSyncBadge('', 'Sinkron ke Cloud');
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!currentAdmin) {
+                alert('Hanya admin yang berhak menghapus postingan!');
+                return;
+            }
+            if (!confirm('Apakah Anda yakin ingin menghapus postingan ini?')) return;
+
+            updateSyncBadge('syncing', 'Menghapus postingan...');
+            try {
+                if (db) {
+                    await db.collection("posts").doc(postId).delete();
+                }
+                appPosts = appPosts.filter(p => p.id !== postId);
+                renderPosts();
+            } catch (err) {
+                alert('Gagal menghapus postingan: ' + err.message);
+            } finally {
+                updateSyncBadge('', 'Sinkron ke Cloud');
+            }
+        }
+
+        // ==========================================
+        // 6. UI RENDERING FUNCTIONS
+        // ==========================================
+        function renderPosts() {
+            const container = document.getElementById('posts-container');
+            if (!container) return;
+
+            if (appPosts.length === 0) {
+                container.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 28px;">
+                        <p style="font-size: 14px; color: var(--text-muted);">Belum ada postingan baru.</p>
+                        <p style="font-size: 12px; margin-top: 4px;">Admin dapat mengunggah pengumuman, modul, foto, atau video.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = appPosts.map(p => {
+                const dateStr = new Date(p.createdAt || Date.now()).toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                let mediaHtml = '';
+                const parsedVideo = parseExternalVideoUrl(p.attachmentUriOrData);
+
+                if (parsedVideo) {
+                    if (parsedVideo.type === 'iframe') {
+                        mediaHtml = `
+                            <div class="media-preview-container video-iframe-wrapper">
+                                <iframe src="${parsedVideo.embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                        `;
+                    } else {
+                        mediaHtml = `
+                            <div class="media-preview-container">
+                                <video src="${parsedVideo.url}" controls playsinline preload="metadata"></video>
+                            </div>
+                        `;
+                    }
+                } else if (p.attachmentType === 'IMAGE' && p.attachmentUriOrData) {
+                    mediaHtml = `
+                        <div class="media-preview-container">
+                            <img src="${p.attachmentUriOrData}" class="media-img" alt="Lampiran Postingan" loading="lazy">
+                        </div>
+                    `;
+                } else if (p.attachmentUriOrData) {
+                    mediaHtml = `
+                        <div style="margin-top: 10px; padding: 8px 12px; background: var(--badge-bg); border-radius: 8px; border: 1.5px solid var(--comic-border); display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px;">
+                                📄 ${p.attachmentFileName || 'Unduh Berkas'}
+                            </span>
+                            <a href="${p.attachmentUriOrData}" target="_blank" class="btn btn-yellow" style="font-size: 11px; padding: 4px 10px; text-decoration: none;">Buka</a>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="post-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <span class="post-tag">${p.category || 'Pengumuman'}</span>
+                                <h3 style="font-size: 16px; color: var(--woody-red); margin-bottom: 4px;">${escapeHtml(p.title)}</h3>
+                                <p style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                                    Oleh: ${escapeHtml(p.authorName)} (${escapeHtml(p.authorRole || 'Admin')}) • ${dateStr} WIB
+                                </p>
+                            </div>
+                            ${currentAdmin ? `
+                                <button onclick="deletePost('${p.id}')" style="background: none; border: none; cursor: pointer; color: var(--woody-red); font-size: 16px; padding: 4px;" title="Hapus Postingan">🗑️</button>
+                            ` : ''}
+                        </div>
+                        <p style="font-size: 13px; line-height: 1.6; margin-top: 8px; white-space: pre-line;">${escapeHtml(p.content)}</p>
+                        ${mediaHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSchedule() {
+            const listEl = document.getElementById('schedule-list');
+            if (!listEl) return;
+
+            const lessons = (appLessons.length ? appLessons : DEFAULT_LESSONS).filter(l => l.day === selectedDay);
+
+            listEl.innerHTML = lessons.map(l => {
+                if (l.isBreak) {
+                    return `
+                        <div class="schedule-item" style="background: var(--badge-bg); opacity: 0.85;">
+                            <div>
+                                <strong style="font-size: 13px;">☕ ${escapeHtml(l.subject)}</strong>
+                            </div>
+                            <span class="schedule-time">${l.timeRange}</span>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="schedule-item" ${currentAdmin ? `style="cursor: pointer;" onclick="openEditLessonModal('${l.id}')"` : ''}>
+                        <div style="flex: 1; padding-right: 8px;">
+                            <div style="font-size: 11px; color: var(--woody-red); font-weight: 700;">${l.periodLabel}</div>
+                            <div style="font-size: 14px; font-weight: 700;">${escapeHtml(l.subject)}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(l.teacherName)} ${l.teacherCode !== '-' ? '('+l.teacherCode+')' : ''}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="schedule-time">${l.timeRange}</span>
+                            ${currentAdmin ? '<span style="font-size: 13px;">✏️</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPicketSchedule() {
+            const container = document.getElementById('picket-schedule-container');
+            if (!container) return;
+
+            const days = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
+            container.innerHTML = days.map(day => `
+                <div style="margin-bottom: 12px; padding: 10px; background: #FFF; border: 2px solid var(--comic-border); border-radius: 10px;">
+                    <strong style="color: var(--woody-red); font-size: 13px;">Hari ${day} (${DEFAULT_PICKET[day].length} Siswa):</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        ${DEFAULT_PICKET[day].map(s => `
+                            <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E8F5E9; border: 1px solid var(--comic-border); color: #1B5E20;">
+                                ${s}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderStructure() {
+            const container = document.getElementById('structure-content');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div style="padding: 10px; background: var(--woody-yellow); border: 2px solid var(--comic-border); border-radius: 10px; color: #1E293B; margin-bottom: 4px;">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Wali Kelas XI-7</div>
+                    <div style="font-size: 15px; font-weight: bold;">${escapeHtml(classStructure.homeroomTeacher)}</div>
+                    <div style="font-size: 11px;">${escapeHtml(classStructure.homeroomNip)}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="padding: 8px; background: var(--input-bg); border: 2px solid var(--comic-border); border-radius: 8px;">
+                        <div style="font-size: 10px; color: var(--woody-red); font-weight: 700;">Ketua Kelas</div>
+                        <div style="font-size: 13px; font-weight: bold;">${escapeHtml(classStructure.classLeader)}</div>
+                    </div>
+                    <div style="padding: 8px; background: var(--input-bg); border: 2px solid var(--comic-border); border-radius: 8px;">
+                        <div style="font-size: 10px; color: var(--woody-red); font-weight: 700;">Wakil Ketua</div>
+                        <div style="font-size: 13px; font-weight: bold;">${escapeHtml(classStructure.viceLeader)}</div>
+                    </div>
+                    <div style="padding: 8px; background: var(--input-bg); border: 2px solid var(--comic-border); border-radius: 8px;">
+                        <div style="font-size: 10px; color: var(--buzz-purple); font-weight: 700;">Sekretaris 1 & 2</div>
+                        <div style="font-size: 13px; font-weight: bold;">${escapeHtml(classStructure.secretary1)}, ${escapeHtml(classStructure.secretary2)}</div>
+                    </div>
+                    <div style="padding: 8px; background: var(--input-bg); border: 2px solid var(--comic-border); border-radius: 8px;">
+                        <div style="font-size: 10px; color: #1B5E20; font-weight: 700;">Bendahara 1 & 2</div>
+                        <div style="font-size: 13px; font-weight: bold;">${escapeHtml(classStructure.treasurer1)}, ${escapeHtml(classStructure.treasurer2)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdminStatus() {
+            const box = document.getElementById('admin-status-box');
+            const hint = document.getElementById('admin-schedule-edit-hint');
+
+            if (currentAdmin) {
+                box.innerHTML = `
+                    <div style="padding: 10px; background: #E8F5E9; border: 2px solid var(--comic-border); border-radius: 10px; margin-bottom: 10px;">
+                        <strong style="color: #1B5E20; font-size: 13px;">✅ Login sebagai: ${escapeHtml(currentAdmin.fullName)}</strong>
+                        <p style="font-size: 12px; color: #334155;">Jabatan: ${escapeHtml(currentAdmin.roleTitle)} (@${escapeHtml(currentAdmin.username)})</p>
+                    </div>
+                    <button class="btn btn-red" style="width: 100%;" onclick="doAdminLogout()">Keluar dari Mode Admin</button>
+                `;
+                if (hint) hint.style.display = 'block';
+            } else {
+                box.innerHTML = `
+                    <p style="font-size: 13px; margin-bottom: 10px;">Anda saat ini berada dalam <strong>Mode Siswa / Pengunjung (Read-Only)</strong>. Pengurus kelas dapat login untuk mengelola postingan dan jadwal.</p>
+                    <button class="btn btn-yellow" style="width: 100%;" onclick="openModal('modal-login')">🔑 Buka Form Login Admin</button>
+                `;
+                if (hint) hint.style.display = 'none';
+            }
+        }
+
+        function renderHomeSummary() {
+            const todayBox = document.getElementById('home-today-info');
+            const recentBox = document.getElementById('home-recent-posts');
+            if (!todayBox || !recentBox) return;
+
+            const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+            const todayName = days[new Date().getDay()];
+            const activeDay = (todayName === 'SABTU' || todayName === 'MINGGU') ? 'SENIN' : todayName;
+
+            const todayPicketList = DEFAULT_PICKET[activeDay] || [];
+            todayBox.innerHTML = `
+                <p><strong>Hari Ini:</strong> ${activeDay} (SMAN 3 Blitar)</p>
+                <p style="margin-top: 4px;"><strong>Petugas Piket:</strong> ${todayPicketList.join(', ')}</p>
+            `;
+
+            if (appPosts.length > 0) {
+                const latest = appPosts[0];
+                recentBox.innerHTML = `
+                    <div style="padding: 8px; background: var(--input-bg); border: 2px solid var(--comic-border); border-radius: 8px;">
+                        <strong style="color: var(--woody-red); font-size: 13px;">${escapeHtml(latest.title)}</strong>
+                        <p style="font-size: 12px; margin-top: 2px;">${escapeHtml(latest.content.slice(0, 100))}${latest.content.length > 100 ? '...' : ''}</p>
+                    </div>
+                `;
+            } else {
+                recentBox.innerHTML = `<p style="font-size: 12px; color: var(--text-muted);">Belum ada pengumuman terbaru.</p>`;
+            }
+        }
+
+        // ==========================================
+        // 7. USER INTERACTIONS & NAVIGATION
+        // ==========================================
+        function switchMainTab(tabName, btnEl) {
+            document.querySelectorAll('.view-panel').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+
+            const targetPanel = document.getElementById('view-' + tabName);
+            if (targetPanel) targetPanel.style.display = 'block';
+            if (btnEl) btnEl.classList.add('active');
+
+            if (tabName === 'schedule') {
+                renderSchedule();
+                renderPicketSchedule();
+            } else if (tabName === 'posts') {
+                renderPosts();
+            } else if (tabName === 'structure') {
+                renderStructure();
+            } else if (tabName === 'admin') {
+                renderAdminStatus();
+            }
+        }
+
+        function switchScheduleSubtab(index) {
+            const lessonsSub = document.getElementById('subtab-lessons');
+            const picketSub = document.getElementById('subtab-picket');
+            const btnLessons = document.getElementById('btn-sub-lessons');
+            const btnPicket = document.getElementById('btn-sub-picket');
+
+            if (index === 0) {
+                lessonsSub.style.display = 'block';
+                picketSub.style.display = 'none';
+                btnLessons.classList.add('active');
+                btnPicket.classList.remove('active');
+                renderSchedule();
+            } else {
+                lessonsSub.style.display = 'none';
+                picketSub.style.display = 'block';
+                btnLessons.classList.remove('active');
+                btnPicket.classList.add('active');
+                renderPicketSchedule();
+            }
+        }
+
+        function filterDaySchedule(day, btnEl) {
+            selectedDay = day;
+            document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderSchedule();
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('xi7_theme', isDark ? 'dark' : 'light');
+            document.getElementById('theme-btn').textContent = isDark ? '☀️ Mode Terang' : '🌙 Mode Gelap';
+        }
+
+        function onAttachmentTypeChanged() {
+            const type = document.getElementById('post-attachment-type').value;
+            const wrapper = document.getElementById('attachment-options-wrapper');
+            wrapper.style.display = type === 'NONE' ? 'none' : 'block';
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openCreatePostModal() {
+            if (!currentAdmin) {
+                alert('Silakan login sebagai admin kelas terlebih dahulu!');
+                openModal('modal-login');
+                return;
+            }
+            openModal('modal-create-post');
+        }
+
+        function doAdminLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+
+            if ((u === 'admin1' || u === 'admin') && (p === '123' || p === 'admin123')) {
+                currentAdmin = {
+                    username: u,
+                    fullName: 'Erastus',
+                    roleTitle: 'Ketua Kelas XI-7'
+                };
+                localStorage.setItem('xi7_admin_auth', JSON.stringify(currentAdmin));
+                closeModal('modal-login');
+                renderAdminStatus();
+                renderSchedule();
+                renderPosts();
+                alert('Berhasil masuk sebagai Admin: ' + currentAdmin.fullName);
+            } else {
+                alert('Username atau password admin salah!');
+            }
+        }
+
+        function doAdminLogout() {
+            currentAdmin = null;
+            localStorage.removeItem('xi7_admin_auth');
+            renderAdminStatus();
+            renderSchedule();
+            renderPosts();
+            alert('Berhasil keluar dari mode admin.');
+        }
+
+        // Edit Lesson
+        function openEditLessonModal(lessonId) {
+            if (!currentAdmin) return;
+            const lesson = (appLessons.length ? appLessons : DEFAULT_LESSONS).find(l => l.id === lessonId);
+            if (!lesson) return;
+
+            document.getElementById('edit-lesson-id').value = lesson.id;
+            document.getElementById('edit-lesson-day').value = lesson.day;
+            document.getElementById('edit-lesson-time').value = lesson.timeRange;
+            document.getElementById('edit-lesson-subject').value = lesson.subject;
+            document.getElementById('edit-lesson-teacher').value = lesson.teacherName;
+            document.getElementById('edit-lesson-code').value = lesson.teacherCode;
+
+            openModal('modal-edit-lesson');
+        }
+
+        async function saveEditedLesson() {
+            const id = document.getElementById('edit-lesson-id').value;
+            const time = document.getElementById('edit-lesson-time').value.trim();
+            const subject = document.getElementById('edit-lesson-subject').value.trim();
+            const teacher = document.getElementById('edit-lesson-teacher').value.trim();
+            const code = document.getElementById('edit-lesson-code').value.trim();
+
+            const idx = (appLessons.length ? appLessons : DEFAULT_LESSONS).findIndex(l => l.id === id);
+            if (idx === -1) return;
+
+            const updated = {
+                ...DEFAULT_LESSONS[idx],
+                ...(appLessons[idx] || {}),
+                id: id,
+                timeRange: time,
+                subject: subject,
+                teacherName: teacher,
+                teacherCode: code || '-'
+            };
+
+            updateSyncBadge('syncing', 'Menyimpan jadwal ke cloud...');
+            try {
+                if (db) {
+                    await db.collection("lessons").doc(id).set(updated, { merge: true });
+                }
+                appLessons[idx] = updated;
+                renderSchedule();
+                closeModal('modal-edit-lesson');
+                alert('Jadwal pelajaran berhasil diperbarui!');
+            } catch (err) {
+                alert('Gagal memperbarui jadwal: ' + err.message);
+            } finally {
+                updateSyncBadge('', 'Sinkron ke Cloud');
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+            })[m]);
+        }
+
+        // ==========================================
+        // 8. APP INITIALIZATION
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            // Restore theme
+            const savedTheme = localStorage.getItem('xi7_theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-btn').textContent = '☀️ Mode Terang';
+            }
+
+            renderHomeSummary();
+            renderSchedule();
+            renderPicketSchedule();
+            renderStructure();
+            renderAdminStatus();
+            setupRealtimeListeners();
+        });
+    </script>
 </body>
 </html>

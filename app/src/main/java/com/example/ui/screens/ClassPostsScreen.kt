@@ -46,6 +46,10 @@ import com.example.ui.components.EditAdminProfileDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.ClassUiState
 import com.example.ui.viewmodel.ClassViewModel
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -735,6 +739,18 @@ private fun PostAttachmentView(
             }
         }
         AttachmentType.VIDEO -> {
+            val uriStr = post.attachmentUriOrData
+            val isYouTube = uriStr.contains("youtube.com") || uriStr.contains("youtu.be")
+            val isDrive = uriStr.contains("drive.google.com")
+            val isTikTok = uriStr.contains("tiktok.com")
+            val isInstagram = uriStr.contains("instagram.com")
+            val platformLabel = when {
+                isYouTube -> "YOUTUBE VIDEO"
+                isDrive -> "GOOGLE DRIVE VIDEO"
+                isTikTok -> "TIKTOK VIDEO"
+                isInstagram -> "INSTAGRAM VIDEO"
+                else -> "VIDEO PEMBELAJARAN"
+            }
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = Slate900,
@@ -748,7 +764,7 @@ private fun PostAttachmentView(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = Red500,
+                        color = if (isYouTube) Red500 else if (isDrive) Amber500 else WoodyRed,
                         modifier = Modifier.size(40.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -768,7 +784,7 @@ private fun PostAttachmentView(
                                 color = Red500.copy(alpha = 0.2f)
                             ) {
                                 Text(
-                                    text = "VIDEO PEMBELAJARAN",
+                                    text = platformLabel,
                                     color = Red500,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
@@ -786,7 +802,7 @@ private fun PostAttachmentView(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Ketuk untuk melihat link/player video",
+                            text = "Ketuk untuk memutar video langsung",
                             color = Slate400,
                             fontSize = 11.sp
                         )
@@ -933,21 +949,45 @@ private fun AttachmentDetailDialog(
                         }
                     }
                     AttachmentType.VIDEO -> {
+                        val uriStr = post.attachmentUriOrData
+                        val isYouTube = uriStr.contains("youtube.com") || uriStr.contains("youtu.be")
+                        val isDrive = uriStr.contains("drive.google.com")
+                        val platformLabel = when {
+                            isYouTube -> "Putar di YouTube"
+                            isDrive -> "Buka di Google Drive"
+                            else -> "Putar Video Pembelajaran"
+                        }
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = Slate900,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(140.dp)
+                                .clickable {
+                                    if (uriStr.isNotEmpty()) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Membuka video: ${post.attachmentFileName}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.PlayCircle, contentDescription = null, tint = Red500, modifier = Modifier.size(54.dp))
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = null,
+                                    tint = if (isYouTube) Red500 else if (isDrive) Amber500 else WoodyYellow,
+                                    modifier = Modifier.size(54.dp)
+                                )
                                 Spacer(modifier = Modifier.height(6.dp))
-                                Text("Pemutar Video XI-7 Hub", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(platformLabel, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("Ketuk untuk memutar video langsung di perangkat", color = Slate400, fontSize = 11.sp)
                             }
                         }
                     }
@@ -1406,6 +1446,53 @@ private fun AdminAuthDialog(
     }
 }
 
+private fun compressImageUriToBase64(context: android.content.Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val original = BitmapFactory.decodeStream(inputStream)
+        inputStream.close()
+        if (original == null) return null
+
+        val maxWidth = 800
+        val width = original.width
+        val height = original.height
+        val scaled = if (width > maxWidth) {
+            val scaledHeight = (height.toFloat() * maxWidth / width).toInt()
+            Bitmap.createScaledBitmap(original, maxWidth, scaledHeight, true)
+        } else {
+            original
+        }
+
+        val out = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 70, out)
+        val bytes = out.toByteArray()
+        "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+private fun getFileSize(context: android.content.Context, uri: Uri): Long {
+    return try {
+        context.contentResolver.openFileDescriptor(uri, "r")?.use {
+            it.statSize
+        } ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+}
+
+private fun readUriAsBase64(context: android.content.Context, uri: Uri, mimeType: String): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val bytes = inputStream.readBytes()
+        inputStream.close()
+        "data:$mimeType;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } catch (e: Exception) {
+        null
+    }
+}
+
 @Composable
 private fun CreatePostDialog(
     loggedInAdmin: AdminAccount?,
@@ -1423,10 +1510,66 @@ private fun CreatePostDialog(
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            attachmentUriOrData = it.toString()
-            val path = it.lastPathSegment ?: "file_lampiran"
+        uri?.let { pickedUri ->
+            val path = pickedUri.lastPathSegment ?: "file_lampiran"
             attachmentFileName = path.substringAfterLast('/')
+
+            when (attachmentType) {
+                AttachmentType.IMAGE -> {
+                    val compressedBase64 = compressImageUriToBase64(context, pickedUri)
+                    if (compressedBase64 != null) {
+                        attachmentUriOrData = compressedBase64
+                        Toast.makeText(context, "Foto berhasil dikompresi (max 800px, 70% quality)!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        attachmentUriOrData = pickedUri.toString()
+                    }
+                }
+                AttachmentType.VIDEO -> {
+                    val sizeBytes = getFileSize(context, pickedUri)
+                    val sizeMb = sizeBytes.toDouble() / (1024 * 1024)
+                    if (sizeMb > 10.0) {
+                        Toast.makeText(
+                            context,
+                            "Ukuran file video (${String.format(Locale.US, "%.1f", sizeMb)}MB) melebihi batas 10MB! Gunakan link YouTube / Google Drive pada Opsi 1.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        attachmentUriOrData = ""
+                        attachmentFileName = ""
+                    } else {
+                        val base64Data = readUriAsBase64(context, pickedUri, "video/mp4")
+                        if (base64Data != null) {
+                            attachmentUriOrData = base64Data
+                            Toast.makeText(context, "Video siap diputar (${String.format(Locale.US, "%.1f", sizeMb)}MB)!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            attachmentUriOrData = pickedUri.toString()
+                        }
+                    }
+                }
+                AttachmentType.DOCUMENT -> {
+                    val sizeBytes = getFileSize(context, pickedUri)
+                    val sizeMb = sizeBytes.toDouble() / (1024 * 1024)
+                    if (sizeMb > 10.0) {
+                        Toast.makeText(
+                            context,
+                            "Ukuran file dokumen melebihi batas 10MB!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        attachmentUriOrData = ""
+                        attachmentFileName = ""
+                    } else {
+                        val base64Data = readUriAsBase64(context, pickedUri, "application/octet-stream")
+                        if (base64Data != null) {
+                            attachmentUriOrData = base64Data
+                            Toast.makeText(context, "Dokumen siap diunggah!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            attachmentUriOrData = pickedUri.toString()
+                        }
+                    }
+                }
+                else -> {
+                    attachmentUriOrData = pickedUri.toString()
+                }
+            }
         }
     }
 

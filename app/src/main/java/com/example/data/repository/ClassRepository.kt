@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.data.model.*
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.example.reminder.NotificationHelper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -537,6 +538,14 @@ class ClassRepository(private val context: Context) {
         prefs.edit().putBoolean("notif_enabled", enabled).apply()
     }
 
+    fun hasPromptedInitialNotification(): Boolean {
+        return prefs.getBoolean("has_prompted_initial_notification", false)
+    }
+
+    fun setPromptedInitialNotification(prompted: Boolean) {
+        prefs.edit().putBoolean("has_prompted_initial_notification", prompted).apply()
+    }
+
     fun getNotificationTime(): String {
         return prefs.getString("notif_time", "06:30") ?: "06:30"
     }
@@ -594,6 +603,31 @@ class ClassRepository(private val context: Context) {
             if (map.isEmpty()) getDefaultPicketSchedule() else map
         } catch (e: Exception) {
             getDefaultPicketSchedule()
+        }
+    }
+
+    fun savePicketScheduleLocalOnly(schedule: Map<DayOfWeekEnum, List<String>>) {
+        val json = JSONObject()
+        schedule.forEach { (day, students) ->
+            val arr = JSONArray()
+            students.forEach { arr.put(it) }
+            json.put(day.name, arr)
+        }
+        prefs.edit().putString("picket_schedule", json.toString()).apply()
+    }
+
+    fun savePicketSchedule(schedule: Map<DayOfWeekEnum, List<String>>) {
+        savePicketScheduleLocalOnly(schedule)
+
+        try {
+            val mapData = mutableMapOf<String, Any>()
+            schedule.forEach { (day, students) ->
+                mapData[day.name] = students
+            }
+            mapData["updatedAt"] = System.currentTimeMillis().toString()
+            firestore?.collection("picket")?.document("schedule")?.set(mapData, SetOptions.merge())
+        } catch (e: Throwable) {
+            Log.w("ClassRepository", "Firestore save picket schedule error: ${e.message}")
         }
     }
 
@@ -1124,6 +1158,11 @@ class ClassRepository(private val context: Context) {
     fun syncWithFirestore(onUpdate: (() -> Unit)? = null) {
         val fs = firestore ?: return
 
+        var isInitialPosts = true
+        var isInitialStructure = true
+        var isInitialLessons = true
+        var isInitialPicket = true
+
         // 1. Sync & Listen Admins
         try {
             fs.collection("admins").addSnapshotListener { snapshot, err ->
@@ -1223,7 +1262,19 @@ class ClassRepository(private val context: Context) {
                         val cat = (data["category"] as? String) ?: "Pengumuman"
                         list.add(ClassPost(id, title, content, author, role, createdAt, attType, attUri, attName, cat))
                     }
+                    val previousIds = getClassPosts().map { it.id }.toSet()
                     val sortedList = list.filter { !deletedSet.contains(it.id) }.sortedByDescending { it.createdAt }
+
+                    // Trigger notification for newly added post if not initial sync
+                    if (!isInitialPosts && isNotificationEnabled()) {
+                        val newlyAdded = sortedList.filter { !previousIds.contains(it.id) }
+                        if (newlyAdded.isNotEmpty()) {
+                            val newest = newlyAdded.first()
+                            NotificationHelper.showNewPostNotification(context, newest)
+                        }
+                    }
+                    isInitialPosts = false
+
                     val arr = JSONArray()
                     sortedList.forEach { p ->
                         val obj = JSONObject()
@@ -1270,6 +1321,7 @@ class ClassRepository(private val context: Context) {
                 } else {
                     val data = snapshot.data
                     if (data != null) {
+                        val prevStructure = getClassStructure()
                         val structure = ClassStructure(
                             homeroomTeacher = (data["homeroomTeacher"] as? String) ?: "Dyah Ayu H., S.Pd",
                             homeroomNip = (data["homeroomNip"] as? String) ?: "Guru Wali Kelas XI-7",
@@ -1280,6 +1332,8 @@ class ClassRepository(private val context: Context) {
                             treasurer1 = (data["treasurer1"] as? String) ?: "Santika",
                             treasurer2 = (data["treasurer2"] as? String) ?: "Aiko"
                         )
+
+                        val hasChanged = prevStructure != structure
                         val obj = JSONObject()
                         obj.put("homeroomTeacher", structure.homeroomTeacher)
                         obj.put("homeroomNip", structure.homeroomNip)
@@ -1290,12 +1344,57 @@ class ClassRepository(private val context: Context) {
                         obj.put("treasurer1", structure.treasurer1)
                         obj.put("treasurer2", structure.treasurer2)
                         prefs.edit().putString("class_structure_json", obj.toString()).apply()
+
+                        if (!isInitialStructure && hasChanged && isNotificationEnabled()) {
+                            NotificationHelper.showStructureUpdateNotification(context, structure)
+                        }
+                        isInitialStructure = false
                         onUpdate?.invoke()
                     }
                 }
             }
         } catch (e: Throwable) {
             Log.w("ClassRepository", "Sync structure error: ${e.message}")
+        }
+
+        // 4. Sync & Listen Picket Schedule
+        try {
+            fs.collection("picket").document("schedule").addSnapshotListener { snapshot, err ->
+                if (err != null || snapshot == null) return@addSnapshotListener
+                if (!snapshot.exists()) {
+                    val sched = getPicketSchedule()
+                    val mapData = mutableMapOf<String, Any>()
+                    sched.forEach { (day, list) -> mapData[day.name] = list }
+                    mapData["updatedAt"] = System.currentTimeMillis().toString()
+                    fs.collection("picket").document("schedule").set(mapData, SetOptions.merge())
+                } else {
+                    val data = snapshot.data
+                    if (data != null) {
+                        val map = mutableMapOf<DayOfWeekEnum, List<String>>()
+                        for (day in DayOfWeekEnum.values()) {
+                            val rawList = data[day.name] as? List<*>
+                            if (rawList != null) {
+                                map[day] = rawList.mapNotNull { it?.toString() }
+                            }
+                        }
+                        if (map.isNotEmpty()) {
+                            val prev = getPicketSchedule()
+                            val hasChanged = prev != map
+                            savePicketScheduleLocalOnly(map)
+                            if (!isInitialPicket && hasChanged && isNotificationEnabled()) {
+                                val cal = Calendar.getInstance()
+                                val dayEnum = DayOfWeekEnum.fromDayNumber(cal.get(Calendar.DAY_OF_WEEK))
+                                val students = map[dayEnum] ?: emptyList()
+                                NotificationHelper.showPicketUpdateNotification(context, dayEnum.displayName, students)
+                            }
+                            isInitialPicket = false
+                            onUpdate?.invoke()
+                        }
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            Log.w("ClassRepository", "Sync picket schedule error: ${e.message}")
         }
 
         // 5. Sync & Listen Lessons
@@ -1305,6 +1404,7 @@ class ClassRepository(private val context: Context) {
                 if (!snapshot.isEmpty) {
                     val currentMap = getLessons().associateBy { it.id }.toMutableMap()
                     var changed = false
+                    var firstChangedLesson: LessonPeriod? = null
                     for (doc in snapshot.documents) {
                         val data = doc.data ?: continue
                         val id = doc.id
@@ -1320,14 +1420,27 @@ class ClassRepository(private val context: Context) {
                         if (currentMap.containsKey(id)) {
                             val existing = currentMap[id]!!
                             if (existing.subject != subject || existing.teacherName != teacherName || existing.teacherCode != teacherCode || existing.timeRange != timeRange || existing.isBreak != isBreak) {
-                                currentMap[id] = LessonPeriod(id, day, periodLabel, timeRange, subject, teacherName, teacherCode, isBreak)
+                                val updated = LessonPeriod(id, day, periodLabel, timeRange, subject, teacherName, teacherCode, isBreak)
+                                currentMap[id] = updated
                                 changed = true
+                                if (firstChangedLesson == null) firstChangedLesson = updated
                             }
                         }
                     }
                     if (changed) {
                         saveLessons(currentMap.values.toList())
+                        if (!isInitialLessons && isNotificationEnabled() && firstChangedLesson != null) {
+                            NotificationHelper.showScheduleUpdateNotification(
+                                context,
+                                firstChangedLesson.subject,
+                                firstChangedLesson.periodLabel,
+                                firstChangedLesson.teacherName
+                            )
+                        }
+                        isInitialLessons = false
                         onUpdate?.invoke()
+                    } else {
+                        isInitialLessons = false
                     }
                 }
             }

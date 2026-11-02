@@ -1,0 +1,15 @@
+{
+  "name": "XI-7 Hub SMAN 3 Blitar",
+  "short_name": "XI-7 Hub",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#7EC8E3",
+  "theme_color": "#E53935",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

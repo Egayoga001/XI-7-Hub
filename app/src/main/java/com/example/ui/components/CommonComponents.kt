@@ -29,7 +29,8 @@ fun AppTopBar(
     subtitle: String? = null,
     loggedInAdmin: AdminAccount? = null,
     onAdminBadgeClick: (() -> Unit)? = null,
-    onInfoClick: (() -> Unit)? = null
+    onInfoClick: (() -> Unit)? = null,
+    syncStatusText: String = "🟢 Sinkron ke Cloud"
 ) {
     Surface(
         color = MaterialTheme.colorScheme.primary,
@@ -80,13 +81,22 @@ fun AppTopBar(
                                 fontSize = 16.sp
                             )
                         )
-                        if (subtitle != null) {
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 11.sp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (subtitle != null) {
+                                Text(
+                                    text = subtitle,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        fontSize = 11.sp
+                                    )
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                            Text(
+                                text = "• $syncStatusText",
+                                fontSize = 10.sp,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
